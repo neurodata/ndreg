@@ -15,5 +15,8 @@ class TestPreprocessor(BaseTestCase):
 
     def test_good_initialization(self):
         preprocessor_good = Preprocessor(img_sitk)
-        
-        
+
+    def test_bad_initialization(self):
+        preprocessor_bad = Preprocessor(sitk.GetArrayFromImage(img_sitk))
+
+    def test_
