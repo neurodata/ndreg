@@ -17,8 +17,8 @@ class Preprocessor:
         else: 
             raise Exception("Please convert your image into a SimpleITK image")
 
-    def remove_streaks():
-        fft_mag = np.abs(np.fft.fftshift(np.fft.fft2(self.img, axes=(-2, -1)), axes=(-2, -1)))**2
+    def remove_streaks(self):
+        fft_mag = np.abs(np.fft.fftshift(np.fft.fft2(self.img_np, axes=(-2, -1)), axes=(-2, -1)))**2
         fft_mag = np.mean(fft_mag, axis=0)
         center = [math.ceil((fft_mag_norm.shape[1]+1)/2), math.ceil((fft_mag_norm.shape[0]+1)/2)]
         fx, fy = np.meshgrid(np.arange(fft_mag_norm.shape[1]), np.arange(fft_mag_norm.shape[0]))
@@ -61,9 +61,9 @@ class Preprocessor:
         img_streak_free = np.fft.ifft2(filtered_fft, axes=(-2,-1))
         return img_streak_free
 
-    def create_mask():
+    def create_mask(self):
         gmix = mixture.gaussian_mixture.GaussianMixture(n_components=3, covariance_type='full', init_params='kmeans', verbose=0)
-        gmix.fit(self.img.ravel().reshape(-1, 1))
+        gmix.fit(self.img_np.ravel().reshape(-1, 1))
         means = gmix.means_
         covariances = gmix.covariances_
         mean_background = means.min()
@@ -82,7 +82,7 @@ class Preprocessor:
         connected_comp[ connected_comp != idx ] = 0 
         return connected_comp
         
-    def remove_circle():
+    def remove_circle(self):
         radius = 170 # px
 	origin_shift = [0, 0]
 	center = [inImg_orig_np.shape[-1]/2 + origin_shift[0], inImg_orig_np.shape[-2]/2 + origin_shift[1]]
@@ -93,19 +93,20 @@ class Preprocessor:
 		mask[i,j] = math.sqrt((i-center[1])**2 + (j-center[0])**2) 
 	mask = (mask < radius).astype('uint64')
 	new_mask = np.repeat(mask[None,:,:], inImg_orig_np.shape[0], axis=0)
-	img_masked = np.multiply(self.img, new_mask)
+	img_masked = np.multiply(self.img_np, new_mask)
 	return img_masked
-    def correct_bias_field(mask=None, scale=1.0, numBins=64):
+
+    def correct_bias_field(self, mask=None, scale=0.4, numBins=128):
 	"""
 	Bias corrects an image using the N4 algorithm
 	"""
-	spacing = np.array(self.img.GetSpacing())/scale
-	img_ds = ndreg.imgResample(self.img, spacing=spacing)
+	spacing = np.array(self.img_sitk.GetSpacing())/scale
+	img_ds = ndreg.imgResample(self.img_sitk, spacing=spacing)
 
 	# Calculate bias
 	if mask is None:
-	    mask = sitk.Image(img_ds.GetSize(), sitk.sitkUInt8)+1
-	    mask.CopyInformation(img_ds)
+	    mask = sitk.Image(self.img_sitk.GetSize(), sitk.sitkUInt8)+1
+	    mask.CopyInformation(self.img_sitk)
 	else:
 	    mask = imgResample(mask, spacing=spacing)
 

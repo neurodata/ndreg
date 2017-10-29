@@ -35,7 +35,8 @@ RUN apt-get -y install \
   git \
   cmake \
   libinsighttoolkit4-dev \
-  libfftw3-dev
+  libfftw3-dev \
+  pytest
 
 RUN pip install --upgrade pip
 RUN pip install matplotlib SimpleITK numpy ndio psutil
