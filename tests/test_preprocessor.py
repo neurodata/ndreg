@@ -1,29 +1,42 @@
 import sys
 sys.path.append('../')
-import Preprocessor
+from Preprocessor import Preprocessor
 import SimpleITK as sitk
+import tifffile as tf
+from testlib.testcase import BaseTestCase
 
-class TestPreprocessor(BaseTestCase):
+class PreprocessorTestCase(BaseTestCase):
     
     @classmethod
-    def setUpClass():
-        img = tf.imread('../sample_data/atlas_to_control_9.tif')
-        img_sitk = sitk.GetImageFromArray(img)
-        img_sitk.SetSpacing((0.0005, 0.0005, 0.005))
-        img_sitk.SetDirection(sitk.AffineTransform(img_sitk.GetDimension()).GetMatrix())
-        img_sitk.SetOrigin([0] * img_sitk.GetDimension())
+    def setUpClass(self):
+        self.img = tf.imread('../sample_data/atlas_to_control_9.tif')
+        self.img_sitk = sitk.GetImageFromArray(self.img)
+        self.img_sitk.SetSpacing((0.0005, 0.0005, 0.005))
+        self.img_sitk.SetDirection(sitk.AffineTransform(self.img_sitk.GetDimension()).GetMatrix())
+        self.img_sitk.SetOrigin([0] * self.img_sitk.GetDimension())
 
     def test_good_initialization(self):
-        preprocessor_good = Preprocessor(img_sitk)
+        preprocessor_good = Preprocessor(self.img_sitk)
 
     def test_bad_initialization(self):
-        preprocessor_bad = Preprocessor(sitk.GetArrayFromImage(img_sitk))
+        try:
+            preprocessor_bad = Preprocessor(self.img)
+        except Exception as e:
+            assert(e.message == "Please convert your image into a SimpleITK image")  
 
-    def test_remove_streak(self):
+    def test_remove_streaks(self):
+        preprocessor = Preprocessor(self.img_sitk)
+        preprocessor.remove_streaks()
 
     def test_create_mask(self):
+        preprocessor = Preprocessor(self.img_sitk)
+        preprocessor.create_mask()
 
     def test_remove_circle(self):
+        preprocessor = Preprocessor(self.img_sitk)
+        preprocessor.remove_circle()
 
-    def correct_bias_field(self):
+    def test_correct_bias_field(self):
+        preprocessor = Preprocessor(self.img_sitk)
+        preprocessor.correct_bias_field()
 

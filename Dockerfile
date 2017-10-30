@@ -19,7 +19,7 @@ RUN apt-get -y upgrade
 
 RUN apt-get -y install build-essential
 
-RUN apt-get -y install \
+RUN apt-get update && apt-get -y install \
   python-pip \
   python-all-dev \
   zlib1g-dev \
@@ -36,10 +36,12 @@ RUN apt-get -y install \
   cmake \
   libinsighttoolkit4-dev \
   libfftw3-dev \
-  pytest
+  icu-devtools \
+  libicu-dev \
+  vim
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib SimpleITK numpy ndio psutil
+RUN pip install matplotlib SimpleITK numpy ndio psutil pytest
 
 # We currently following 'master' to incorperate many recent bug fixes.
 # When stable, use the following instead:
@@ -57,7 +59,7 @@ WORKDIR /work
 ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/vik-dev version.json
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch vik-dev --single-branch
 WORKDIR /work/ndreg
-RUN cmake . && make && make install
+RUN cmake . && make -j16 && make install
 
 # Add Tini
 ENV TINI_VERSION v0.15.0
