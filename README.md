@@ -11,7 +11,7 @@ Pull image from Docker Hub (link [here](https://hub.docker.com/r/vikramc/simple-
 
 ## Hard way
 
-Build image from Dockerfile <br\>
+Build image from Dockerfile <br/>
 
 First clone this repository: `git clone git@github.com:vikramc1/clareg.git` <br/>
 From inside the `clareg` directory: `docker build -t simple-elastix .` <br/>
