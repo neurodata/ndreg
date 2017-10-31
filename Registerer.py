@@ -1,4 +1,5 @@
 import ndreg
+import csv
 import SimpleITK as sitk
 
 
@@ -20,9 +21,9 @@ class Registerer:
             self.invFieldComposite = None
 
     def register_affine(self, spacing, iterations=2000.0, resolutions=8.0):
-        img_reoriented = ndreg.imgReorient(self.img, self.inOrient, self.refOrient)
+        self.img_reoriented = ndreg.imgReorient(self.img, self.inOrient, self.refOrient)
         atlas_ds = sitk.Clamp(ndreg.imgResample(self.atlas, spacing), upperBound=ndreg.imgPercentile(self.atlas, 0.99))
-        img_ds = sitk.Clamp(ndreg.imgResample(img_reoriented, spacing), upperBound=ndreg.imgPercentile(img_reoriented, 0.99))
+        img_ds = sitk.Clamp(ndreg.imgResample(self.img_reoriented, spacing), upperBound=ndreg.imgPercentile(self.img_reoriented, 0.99))
         # normalize
         max_val = ndreg.imgPercentile(img_ds, 0.999)
         min_val = ndreg.imgPercentile(img_ds, 0.001)
@@ -67,11 +68,26 @@ class Registerer:
         (self.field, self.invField) = ndreg.imgMetamorphosisComposite(affine_img, target_img, alphaList=alphaList,
                                               scaleList = scaleList, epsilonList=epsilonList,
                                               useMI=useMI, iterations=iterations, verbose=verbose)
-        affineField = ndreg.affineToField(self.affine, field.GetSize(), field.GetSpacing())
-        self.fieldComposite = ndreg.fieldApplyField(field, affineField)
+        affineField = ndreg.affineToField(self.affine, self.field.GetSize(), self.field.GetSpacing())
+        self.fieldComposite = ndreg.fieldApplyField(self.field, affineField)
 
-        invAffineField = ndreg.affineToField(ndreg.affineInverse(self.affine), invField.GetSize(), invField.GetSpacing())
-        self.invFieldComposite = ndreg.fieldApplyField(invAffineField, invField)
+        invAffineField = ndreg.affineToField(ndreg.affineInverse(self.affine), self.invField.GetSize(), self.invField.GetSpacing())
+        self.invFieldComposite = ndreg.fieldApplyField(invAffineField, self.invField)
        
-        refImg_lddmm = ndreg.imgApplyField(affine_img, self.fieldComposite, size=inImgReoriented.GetSize(), spacing=inImgReoriented.GetSpacing())
+        self.ref_lddmm = ndreg.imgApplyField(affine_img, self.fieldComposite, size=self.img_reoriented.GetSize(), spacing=self.img_reoriented.GetSpacing())
+        return self.ref_lddmm
         
+    def evaluate_registration(self, source_fiducial_file, target_fiducial_file):
+        reader = csv.reader(file(source_fiducial_file))
+        # skip first line, dont need it
+        reader.next()
+        # get the coordinate system
+        coordinateSystem = reader.next()[0].split()[3]
+        columns = reader.next()[1:]
+        atlasLabels = []
+        atlasLocs = []
+        # atlas origin is the geometric mean
+        atlasOrigin = np.array(refImg.GetSize())/2.0
+        for i in reader:
+            atlasLabels.append([i[-3]])
+            atlasLocs.append([float(j) for j in i[1:4]])

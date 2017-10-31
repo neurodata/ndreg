@@ -30,8 +30,6 @@ RUN apt-get update && apt-get -y install \
   tk8.5-dev \
   python-tk \
   libhdf5-dev \
-  git \
-  cmake \
   libinsighttoolkit4-dev \
   libfftw3-dev
 #   icu-devtools \
@@ -60,7 +58,7 @@ WORKDIR /work/ndreg
 RUN cmake . && make -j16 && make install
 
 # Clone the registration package repo
-WORKDIR /work
+WORKDIR /run
 RUN git clone https://github.com/vikramc1/clareg.git
 
 EXPOSE 8888
