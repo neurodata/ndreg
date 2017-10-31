@@ -118,6 +118,10 @@ class Preprocessor:
             mask = sitk.Image(img_ds.GetSize(), sitk.sitkUInt8)+1
             mask.CopyInformation(img_ds)
         else:
+            if type(mask) is not sitk.SimpleITK.Image:
+                mask_sitk = sitk.GetImageFromArray(mask)
+                mask_sitk.SetSpacing(self.img_sitk.GetSpacing())    
+                mask = mask_sitk
             mask = ndreg.imgResample(mask, spacing=spacing)
 
         corrector = sitk.N4BiasFieldCorrectionImageFilter()

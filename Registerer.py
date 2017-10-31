@@ -4,7 +4,7 @@ import SimpleITK as sitk
 
 class Registerer:
 
-    def __init__(self, img, atlas):
+    def __init__(self, img, atlas, inOrient, refOrient):
         if type(img) != sitk.SimpleITK.Image:
             raise Exception("Please convert your image into a SimpleITK Image")
         if type(atlas) != sitk.SimpleITK.Image:
@@ -13,12 +13,14 @@ class Registerer:
             self.img = img
             self.atlas = atlas
             self.affine = []
+            self.inOrient = inOrient
+            self.refOrient = refOrient
             self.atlas_affine = None
             self.fieldComposite = None
             self.invFieldComposite = None
 
-    def register_affine(self, inOrient, refOrient, spacing, iterations=2000.0, resolutions=8.0):
-        img_reoriented = ndreg.imgReorient(self.img, inOrient, refOrient)
+    def register_affine(self, spacing, iterations=2000.0, resolutions=8.0):
+        img_reoriented = ndreg.imgReorient(self.img, self.inOrient, self.refOrient)
         atlas_ds = sitk.Clamp(ndreg.imgResample(self.atlas, spacing), upperBound=ndreg.imgPercentile(self.atlas, 0.99))
         img_ds = sitk.Clamp(ndreg.imgResample(img_reoriented, spacing), upperBound=ndreg.imgPercentile(img_reoriented, 0.99))
         # normalize
@@ -53,7 +55,7 @@ class Registerer:
         
     def register_lddmm(self, affine_img=None, target_img=None, alphaList=[0.05], scaleList=[0.0625, 0.125, 0.25],
             epsilonList=1e-7, sigma=None, useMI=False, iterations=200, verbose=True):
-        if affine_img == None and self.atlas_affine:
+        if affine_img == None and self.atlas_affine is None:
            raise Exception("Perform the affine registration first")
         elif affine_img == None:
             affine_img = self.atlas_affine
@@ -62,13 +64,13 @@ class Registerer:
         if sigma == None:
             sigma = (0.1/target_img.GetNumberOfPixels())
         # TODO: Add sigma param in ndreg and recompile
-        (field, invField) = ndreg.imgMetamorphosisComposite(affine_img, target_img, alphaList=alphaList,
+        (self.field, self.invField) = ndreg.imgMetamorphosisComposite(affine_img, target_img, alphaList=alphaList,
                                               scaleList = scaleList, epsilonList=epsilonList,
                                               useMI=useMI, iterations=iterations, verbose=verbose)
         affineField = ndreg.affineToField(self.affine, field.GetSize(), field.GetSpacing())
         self.fieldComposite = ndreg.fieldApplyField(field, affineField)
 
-        invAffineField = ndreg.affineToField(affineInverse(self.affine), invField.GetSize(), invField.GetSpacing())
+        invAffineField = ndreg.affineToField(ndreg.affineInverse(self.affine), invField.GetSize(), invField.GetSpacing())
         self.invFieldComposite = ndreg.fieldApplyField(invAffineField, invField)
        
         refImg_lddmm = ndreg.imgApplyField(affine_img, self.fieldComposite, size=inImgReoriented.GetSize(), spacing=inImgReoriented.GetSpacing())

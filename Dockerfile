@@ -45,11 +45,11 @@ RUN pip install matplotlib SimpleITK numpy ndio psutil pytest
 
 # We currently following 'master' to incorperate many recent bug fixes.
 # When stable, use the following instead:
-# RUN pip install intern
-WORKDIR /work
-RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
-WORKDIR /work/intern
-RUN python setup.py install
+RUN pip install intern
+# WORKDIR /work
+# RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
+# WORKDIR /work/intern
+# RUN python setup.py install
 
 # Set up ipython
 RUN pip install ipython[all] jupyter scikit-image scikit-learn
@@ -62,10 +62,10 @@ WORKDIR /work/ndreg
 RUN cmake . && make -j16 && make install
 
 # Add Tini
-ENV TINI_VERSION v0.15.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
+# ENV TINI_VERSION v0.15.0
+# ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+# RUN chmod +x /tini
+# ENTRYPOINT ["/tini", "--"]
 
 WORKDIR /run
 
