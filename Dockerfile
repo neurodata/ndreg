@@ -15,9 +15,7 @@ RUN python setup.py install
 
 WORKDIR /run
 
-RUN apt-get -y upgrade 
-
-RUN apt-get -y install build-essential
+RUN apt-get -y upgrade && apt-get -y install build-essential
 
 RUN apt-get update && apt-get -y install \
   python-pip \
@@ -35,17 +33,17 @@ RUN apt-get update && apt-get -y install \
   git \
   cmake \
   libinsighttoolkit4-dev \
-  libfftw3-dev \
+  libfftw3-dev
 #   icu-devtools \
 #   libicu-dev \
 #   vim
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib SimpleITK numpy ndio psutil pytest
+RUN pip install matplotlib SimpleITK numpy psutil pytest intern
 
 # We currently following 'master' to incorperate many recent bug fixes.
 # When stable, use the following instead:
-RUN pip install intern
+#RUN pip install intern
 # WORKDIR /work
 # RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
 # WORKDIR /work/intern
@@ -61,16 +59,9 @@ RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch vik-de
 WORKDIR /work/ndreg
 RUN cmake . && make -j16 && make install
 
-# Add Tini
-# ENV TINI_VERSION v0.15.0
-# ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-# RUN chmod +x /tini
-# ENTRYPOINT ["/tini", "--"]
-
-WORKDIR /run
-
 # Clone the registration package repo
-RUN git clone git@github.com:vikramc1/clareg.git
+WORKDIR /work
+RUN git clone https://github.com/vikramc1/clareg.git
 
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
