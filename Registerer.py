@@ -24,14 +24,14 @@ class Registerer:
         # normalize
         max_val = ndreg.imgPercentile(img_ds, 0.999)
         min_val = ndreg.imgPercentile(img_ds, 0.001)
-        img_ds = (img_ds - min_val)/(max_val - min_val)
+        self.img_ds = (img_ds - min_val)/(max_val - min_val)
         
         max_val = ndreg.imgPercentile(atlas_ds, 0.999)
         min_val = ndreg.imgPercentile(atlas_ds, 0.001)
-        atlas_ds = (atlas_ds - min_val)/(max_val - min_val)
+        self.atlas_ds = (atlas_ds - min_val)/(max_val - min_val)
         
-        fixedImage = img_ds
-        movingImage = atlas_ds
+        fixedImage = self.img_ds
+        movingImage = self.atlas_ds
         
         # set parameters
         affineParameterMap = sitk.GetDefaultParameterMap('affine')
@@ -51,8 +51,14 @@ class Registerer:
         self.affine = [float(i) for i in transformParameterMap['TransformParameters']]
         return self.atlas_affine
         
-    def register_lddmm(self, affine_img, target_img, alphaList=[0.05], scaleList=[0.0625, 0.125, 0.25],
+    def register_lddmm(self, affine_img=None, target_img=None, alphaList=[0.05], scaleList=[0.0625, 0.125, 0.25],
             epsilonList=1e-7, sigma=None, useMI=False, iterations=200, verbose=True):
+        if affine_img == None and self.atlas_affine:
+           raise Exception("Perform the affine registration first")
+        elif affine_img == None:
+            affine_img = self.atlas_affine
+        if target_img == None:
+            target_img = self.img_ds
         if sigma == None:
             sigma = (0.1/target_img.GetNumberOfPixels())
         # TODO: Add sigma param in ndreg and recompile
