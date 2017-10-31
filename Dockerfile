@@ -36,9 +36,9 @@ RUN apt-get update && apt-get -y install \
   cmake \
   libinsighttoolkit4-dev \
   libfftw3-dev \
-  icu-devtools \
-  libicu-dev \
-  vim
+#   icu-devtools \
+#   libicu-dev \
+#   vim
 
 RUN pip install --upgrade pip
 RUN pip install matplotlib SimpleITK numpy ndio psutil pytest
@@ -68,6 +68,9 @@ RUN cmake . && make -j16 && make install
 # ENTRYPOINT ["/tini", "--"]
 
 WORKDIR /run
+
+# Clone the registration package repo
+RUN git clone git@github.com:vikramc1/clareg.git
 
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
