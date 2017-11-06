@@ -26,8 +26,8 @@ class Registerer:
     def register_affine(self, spacing, iterations=2000.0, resolutions=8.0):
         # reorient the target to match the source
         self.target_reoriented = ndreg.imgReorient(self.target, self.targetOrient, self.sourceOrient)
-        source_ds = sitk.Clamp(ndreg.imgResample(self.source, spacing), upperBound=ndreg.imgPercentile(self.source, 0.99))
-        target_ds = sitk.Clamp(ndreg.imgResample(self.target_reoriented, spacing), upperBound=ndreg.imgPercentile(self.target_reoriented, 0.99))
+        source_ds = sitk.Clamp(ndreg.imgResample(self.source, [spacing]*3), upperBound=ndreg.imgPercentile(self.source, 0.99))
+        target_ds = sitk.Clamp(ndreg.imgResample(self.target_reoriented, [spacing]*3), upperBound=ndreg.imgPercentile(self.target_reoriented, 0.99))
         # normalize
         max_val = ndreg.imgPercentile(target_ds, 0.999)
         min_val = ndreg.imgPercentile(target_ds, 0.001)
