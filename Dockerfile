@@ -37,15 +37,15 @@ RUN apt-get update && apt-get -y install \
 #   vim
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib SimpleITK numpy psutil pytest intern
+RUN pip install matplotlib SimpleITK numpy psutil pytest
 
 # We currently following 'master' to incorperate many recent bug fixes.
 # When stable, use the following instead:
 #RUN pip install intern
-# WORKDIR /work
-# RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
-# WORKDIR /work/intern
-# RUN python setup.py install
+WORKDIR /work
+RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
+WORKDIR /work/intern
+RUN python setup.py install
 
 # Set up ipython
 RUN pip install ipython[all] jupyter scikit-image scikit-learn
