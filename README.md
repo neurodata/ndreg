@@ -5,22 +5,22 @@ Package that performs affine and LDDMM registration *easily* <br/>
 
 ## Easy way
 
-Pull image from Docker Hub (link [here](https://hub.docker.com/r/vikramc/simple-elastix/)) <br/>
+Pull image from Docker Hub (link [here](https://hub.docker.com/r/neurodata/ndreg)) <br/>
 
-`docker pull vikramc/simple-elastix` <br/>
+`docker pull neurodata/ndreg` <br/>
 
 ## Hard way
 
 Build image from Dockerfile <br/>
 
-First clone this repository: `git clone git@github.com:vikramc1/clareg.git` <br/>
-From inside the `clareg` directory: `docker build -t simple-elastix .` <br/>
+First clone this repository: `git clone git@github.com:neurodata/ndreg.git` <br/>
+From inside the `ndreg` directory: `docker build -t ndreg .` <br/>
 
 # Running
 
 In order to use the functionality built into this Docker image, you need to mount your local data volume as follows:
 
-`docker run --rm -v /path/to/your/data:/run/data/ -p 8888:8888 simple-elastix` <br/>
+`docker run --rm -v /path/to/your/data:/run/data/ -p 8888:8888 ndreg` <br/>
 
 This should print a link to the terminal console that looks like this: <br/>
 
