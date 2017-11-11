@@ -1,4 +1,4 @@
-# clareg
+# ndreg
 Package that performs affine and LDDMM registration *easily* <br/>
 
 # Installation
