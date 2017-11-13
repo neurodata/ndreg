@@ -18,7 +18,9 @@ class Registerer:
             self.affine = []
             self.targetOrient = targetOrient
             self.sourceOrient = sourceOrient
-            self.affine_s2t = None
+            self.source_affine = None
+            self.field = None
+            self.invField = None
             self.fieldComposite = None
             self.invFieldComposite = None
             self.source_lddmm = None
@@ -29,13 +31,8 @@ class Registerer:
         source_ds = sitk.Clamp(ndreg.imgResample(self.source, [spacing]*3), upperBound=ndreg.imgPercentile(self.source, 0.99))
         target_ds = sitk.Clamp(ndreg.imgResample(self.target_reoriented, [spacing]*3), upperBound=ndreg.imgPercentile(self.target_reoriented, 0.99))
         # normalize
-        max_val = ndreg.imgPercentile(target_ds, 0.999)
-        min_val = ndreg.imgPercentile(target_ds, 0.001)
-        self.target_ds = (target_ds - min_val)/(max_val - min_val)
-        
-        max_val = ndreg.imgPercentile(source_ds, 0.999)
-        min_val = ndreg.imgPercentile(source_ds, 0.001)
-        self.source_ds = (source_ds - min_val)/(max_val - min_val)
+        self.target_ds = self._normalize_image(target_ds)
+        self.source_ds = self._normalize_image(source_ds)
         
         movingImage = self.source_ds
         fixedImage = self.target_ds
@@ -57,27 +54,36 @@ class Registerer:
         elastixImageFilter.SetParameterMap(affineParameterMap)
         # run the registration
         elastixImageFilter.Execute()
+        self.elastix_img_filt = elastixImageFilter
         # get the affine transformed source image
-        self.affine_s2t = elastixImageFilter.GetResultImage()
+        self.source_affine = elastixImageFilter.GetResultImage()
         transformParameterMap = elastixImageFilter.GetTransformParameterMap()[0] 
         # save the affine transformation
         self.affine = [float(i) for i in transformParameterMap['TransformParameters']]
-        return self.affine_s2t
+        return self.source_affine
         
-    def register_lddmm(self, affine_img=None, target_img=None, alphaList=[0.05], scaleList=[0.0625, 0.125, 0.25],
-            epsilonList=1e-7, sigma=None, useMI=False, iterations=200, verbose=True):
-        if affine_img == None and self.affine_s2t is None:
+    def register_lddmm(self, affine_img=None, target_img=None, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25], 
+                       epsilon_list=1e-7, sigma=None, use_mi=False, iterations=200, verbose=True, out_dir=''):
+        if affine_img == None and self.source_affine is None:
            raise Exception("Perform the affine registration first")
         elif affine_img == None:
-            affine_img = self.affine_s2t
+            # normalize affine image [0, 1]
+            affine_img = self._normalize_image(self.source_affine)
         if target_img == None:
             target_img = self.target_ds
         if sigma == None:
             sigma = (0.1/target_img.GetNumberOfPixels())
+        
         # TODO: Add sigma param in ndreg and recompile
-        (self.field, self.invField) = ndreg.imgMetamorphosisComposite(affine_img, target_img, alphaList=alphaList,
-                                              scaleList = scaleList, epsilonList=epsilonList,
-                                              useMI=useMI, iterations=iterations, verbose=verbose)
+        (self.field, self.invField) = ndreg.imgMetamorphosisComposite(affine_img, target_img,
+                                                                      alphaList=alpha_list,
+                                                                      scaleList=scale_list,
+                                                                      epsilonList=epsilon_list,
+                                                                      sigma=sigma,
+                                                                      useMI=use_mi, 
+                                                                      iterations=iterations, 
+                                                                      verbose=verbose,
+                                                                      outDirPath=out_dir)
         affineField = ndreg.affineToField(self.affine, self.field.GetSize(), self.field.GetSpacing())
         self.fieldComposite = ndreg.fieldApplyField(self.field, affineField)
 
@@ -85,31 +91,52 @@ class Registerer:
                                              self.invField.GetSpacing())
         self.invFieldComposite = ndreg.fieldApplyField(invAffineField, self.invField)
        
-        self.source_lddmm = ndreg.imgApplyField(affine_img, self.fieldComposite, size=self.target_reoriented.GetSize(),
-                                             spacing=self.target_reoriented.GetSpacing())
+        self.source_lddmm = ndreg.imgApplyField(self.source, self.fieldComposite, 
+                                                size=self.target_reoriented.GetSize(), 
+                                                spacing=self.target_reoriented.GetSpacing())
         return self.source_lddmm
         
-    def checkerboard_image(self):
-        if self.affine_s2t is None:
+    def checkerboard_image(self, vmax=None):
+        if vmax == None:
+            vmax = ndreg.imgPercentile(self.target_ds, 0.99)
+        if self.source_affine is None:
             raise Exception("Perform a registration first. This can be just affine or affine + LDDMM")
         elif self.source_lddmm is None:
-            ndreg.imgShow(ndreg.imgChecker(self.target_ds, self.affine_s2t))
+            ndreg.imgShow(ndreg.imgChecker(self._normalize_image(self.target_ds), 
+                                           self._normalize_image(self.source_affine)),
+                          vmax=1.0)
         else:
-            ndreg.imgShow(ndreg.imgChecker(self.target_ds, self.source_lddmm))
+            ndreg.imgShow(ndreg.imgChecker(self._normalize_image(self.target_ds), 
+                                           self._normalize_image(self.source_lddmm)), 
+                          vmax=1.0)
             
-    def evaluate_affine_registration(self, source_fiducial_file, target_fiducial_file, scale_source, scale_target, orientation_source, orientation_t_initial, orientation_t_final):
+    def evaluate_affine_registration(self, source_fiducial_file, target_fiducial_file, scale_source, scale_target,
+                                     orientation_source_fid, orientation_target_fid):
         # load the landmarks for each brain
         landmarks_source = self._parse_fiducial_file(source_fiducial_file, scale_source)
         landmarks_target = self._parse_fiducial_file(target_fiducial_file, scale_target)
         # reorient the source fiducials so they match the orientation of
-        # target image. then we can apply our transformations
-        landmarks_source_reoriented = self._reorient_landmarks(landmarks_source, orientation_source, 
-                                                               orientation_t_initial, self.source)
-        landmarks_source_affine = self._apply_affine(landmarks_source_reoriented, self.affine)
-        landmarks_source_affine_reoriented = self._reorient_landmarks(landmarks_source_reoriented,
-                                                                     orientation_t_initial, orientation_t_final, 
-                                                                      self.source)
-        mse = self._compute_error(landmarks_source_affine_reoriented, landmarks_target)
+        # source we calculated transformation on. then we can apply our transformations.
+        landmarks_source_r = self._reorient_landmarks(landmarks_source, orientation_source_fid, 
+                                                               self.sourceOrient, self.source)
+        landmarks_source_a = self._apply_affine(landmarks_source_r)
+        landmarks_source_ar = self._reorient_landmarks(landmarks_source_a, self.sourceOrient, 
+                                                       orientation_target_fid, self.target)
+        mse = self._compute_error(landmarks_source_ar, landmarks_target)
+        return mse
+    
+    def evaluate_lddmm_registration(self, source_fiducial_file, target_fiducial_file, scale_source, scale_target,
+                                   orientation_source_fid, orientation_target_fid):
+        if self.fieldComposite is None:
+            raise Exception("Perform LDDMM registration first")
+        landmarks_source = self._parse_fiducial_file(source_fiducial_file, scale_source)
+        landmarks_target = self._parse_fiducial_file(target_fiducial_file, scale_target)
+        landmarks_source_reoriented = self._reorient_landmarks(landmarks_source, orientation_source_fid, 
+                                                               self.sourceOrient, self.source)
+        landmarks_source_lddmm = self._lmk_apply_field(landmarks_source_reoriented, self.fieldComposite)
+        landmarks_source_lddmm_r = self._reorient_landmarks(landmarks_source_lddmm, self.sourceOrient,
+                                                            orientation_target_fid, self.target)
+        mse = self._compute_error(np.array(landmarks_source_lddmm), np.array(landmarks_target))
         return mse
     
     def _reorient_landmarks(self, landmarks, in_orient, out_orient, in_img):
@@ -128,8 +155,6 @@ class Registerer:
             except Exception as e:
                 locs.append(order_in.index(order_out[i][::-1]))
                 swap.append(1)
-#         print(locs)
-#         print(swap)
          # TODO: implement swap code
         for i in range(len(swap)):
             if swap[i]:
@@ -164,18 +189,34 @@ class Registerer:
         columns = reader.next()[1:]
         landmarks = []
         for i in reader:
-#             landmarks.append([i[-3], abs(float(i[1])*scale), abs(float(i[2])*scale), abs(float(i[3])*scale)])
-            landmarks.append([abs(float(i[1])*scale), abs(float(i[2])*scale), abs(float(i[3])*scale)])
+            landmarks.append(np.abs(np.array(i[1:4]).astype(np.float) * scale))
         return np.array(landmarks)
     
-    def _get_landmark_pts(self, landmarks):
-        return np.array([[float(i[1]), float(i[2]), float(i[3])] for i in landmarks.GetLandmarks()])
-
-    def _apply_affine(self, landmarks, affine):
-        landmarks_affine = []
-        affine_mat = np.matrix(np.reshape(self.affine[:9], (3,3)))
-        affine_t = np.array(self.affine[9:])
-        for i in np.array(landmarks):
-            landmarks_affine.append(((affine_mat * np.matrix(i).T).T + affine_t).A)
-        return np.array(landmarks_affine)
-            
+    def _lmk_apply_field(self, fids, field):
+        dim = 3
+        # Create transform
+        field_copy = sitk.GetImageFromArray(sitk.GetArrayFromImage(field))
+        field_copy.CopyInformation(field)
+        transform = sitk.DisplacementFieldTransform(dim)
+        transform.SetInterpolator(sitk.sitkLinear)
+        transform.SetDisplacementField(sitk.Cast(field_copy, sitk.sitkVectorFloat64))
+        return np.array([transform.TransformPoint(i) for i in fids])
+    
+    def _apply_affine(self, fids):
+        p = self.elastix_img_filt.GetTransformParameterMap()[0]
+        center = p['CenterOfRotationPoint']
+        center_f = np.array([float(i) for i in center])
+        at = sitk.AffineTransform(3)
+        at.SetCenter(center_f)
+        at.SetMatrix(self.affine[:9])
+        at.SetTranslation(self.affine[9:])
+        return np.array([at.TransformPoint(i) for i in fids])
+        
+        
+    def _normalize_image(self, img, low_bound=None, up_bound=0.999):
+        min_val = 0.0
+        if low_bound is not None:
+            min_val = ndreg.imgPercentile(img, low_bound)
+        max_val = ndreg.imgPercentile(img, up_bound)
+        
+        return (img - min_val)/(max_val - min_val)

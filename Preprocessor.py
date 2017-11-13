@@ -26,6 +26,7 @@ class Preprocessor:
             self.img_sitk = img
             self.img_np = sitk.GetArrayFromImage(img)
             self.img_no_circle = None
+            self.mask = None
         else: 
             raise Exception("Please convert your image into a SimpleITK image")
 
@@ -89,7 +90,8 @@ class Preprocessor:
             if out[i].area > area_max:
                 area_max = out[i].area
                 idx_max = i+ 1
-        connected_comp[ connected_comp != idx_max ] = 0 
+        connected_comp[ connected_comp != idx_max ] = 0
+        self.mask = connected_comp
         return connected_comp
         
     def remove_circle(self, radius=170):
@@ -105,13 +107,27 @@ class Preprocessor:
         img_masked = np.multiply(self.img_np, new_mask)
         self.img_no_circle = img_masked
         return img_masked
-
-    def correct_bias_field(self, mask=None, scale=0.2, numBins=128):
+    
+    def auto_preprocess(self):
+        
+        mask = self.create_mask()
+        masked_image = self.img_np.copy()
+        masked_image[np.where(mask == 0)] = 0
+        out_img = sitk.GetImageFromArray(masked_image)
+        out_img.CopyInformation(self.img_sitk)
+        return self.correct_bias_field(img=out_img)
+       
+    
+    def correct_bias_field(self, img=None, mask=None, scale=0.2, numBins=128):
         """
         Bias corrects an image using the N4 algorithm
         """
+        if img is None and self.img_no_circle is not None: 
+            img = sitk.GetImageFromArray(self.img_no_circle)
+            img.CopyInformation(self.img_sitk)
+        elif img is None: img = self.img_sitk
         spacing = np.array(self.img_sitk.GetSpacing())/scale
-        img_ds = ndreg.imgResample(self.img_sitk, spacing=spacing)
+        img_ds = ndreg.imgResample(img, spacing=spacing)
 
         # Calculate bias
         if mask is None:
@@ -129,10 +145,10 @@ class Preprocessor:
         bias_ds = img_ds_bc - sitk.Cast(img_ds, img_ds_bc.GetPixelID())
 
         # Upsample bias
-        bias = ndreg.imgResample(bias_ds, spacing=self.img_sitk.GetSpacing(), size=self.img_sitk.GetSize())
+        bias = ndreg.imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
         # Apply bias to original image and threshold to eliminate negitive values
-        upper = np.iinfo(sitkToNpDataTypes[self.img_sitk.GetPixelID()]).max
-        img_bc = sitk.Threshold(self.img_sitk + sitk.Cast(bias, self.img_sitk.GetPixelID()),
+        upper = np.iinfo(sitkToNpDataTypes[img.GetPixelID()]).max
+        img_bc = sitk.Threshold(img + sitk.Cast(bias, img.GetPixelID()),
                     lower=0, upper=upper)
         return img_bc 
