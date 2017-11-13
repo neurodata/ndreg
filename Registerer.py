@@ -131,12 +131,13 @@ class Registerer:
             raise Exception("Perform LDDMM registration first")
         landmarks_source = self._parse_fiducial_file(source_fiducial_file, scale_source)
         landmarks_target = self._parse_fiducial_file(target_fiducial_file, scale_target)
-        landmarks_source_reoriented = self._reorient_landmarks(landmarks_source, orientation_source_fid, 
-                                                               self.sourceOrient, self.source)
-        landmarks_source_lddmm = self._lmk_apply_field(landmarks_source_reoriented, self.fieldComposite)
+        landmarks_source_r = self._reorient_landmarks(landmarks_source, orientation_source_fid, 
+                                                      self.sourceOrient, self.source)
+        landmarks_source_a = self._apply_affine(landmarks_source_r)
+        landmarks_source_lddmm = self._lmk_apply_field(landmarks_source_a, self.field)
         landmarks_source_lddmm_r = self._reorient_landmarks(landmarks_source_lddmm, self.sourceOrient,
                                                             orientation_target_fid, self.target)
-        mse = self._compute_error(np.array(landmarks_source_lddmm), np.array(landmarks_target))
+        mse = self._compute_error(np.array(landmarks_source_lddmm_r), np.array(landmarks_target))
         return mse
     
     def _reorient_landmarks(self, landmarks, in_orient, out_orient, in_img):

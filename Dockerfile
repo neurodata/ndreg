@@ -50,7 +50,7 @@ RUN python setup.py install
 # Set up ipython
 RUN pip install ipython[all] jupyter scikit-image scikit-learn
 
-# Build ndreg. Cache based on last commit.
+# Build ndreg-old. Cache based on last commit.
 WORKDIR /work
 ADD https://api.github.com/repos/neurodata/ndreg-old/git/refs/heads/vik-dev version.json
 RUN git clone https://github.com/neurodata/ndreg-old.git /work/ndreg-old --branch vik-dev --single-branch
@@ -59,7 +59,7 @@ RUN cmake . && make -j16 && make install
 
 # Clone the registration package repo
 WORKDIR /run
-RUN git clone https://github.com/vikramc1/clareg.git
+RUN git clone https://github.com/neurodata/ndreg.git
 
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]

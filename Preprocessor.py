@@ -109,10 +109,9 @@ class Preprocessor:
         return img_masked
     
     def auto_preprocess(self):
-        
-        mask = self.create_mask()
+        if self.mask is None: self.create_mask()
         masked_image = self.img_np.copy()
-        masked_image[np.where(mask == 0)] = 0
+        masked_image[np.where(self.mask == 0)] = 0
         out_img = sitk.GetImageFromArray(masked_image)
         out_img.CopyInformation(self.img_sitk)
         return self.correct_bias_field(img=out_img)
@@ -148,7 +147,7 @@ class Preprocessor:
         bias = ndreg.imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
         # Apply bias to original image and threshold to eliminate negitive values
-        upper = np.iinfo(sitkToNpDataTypes[img.GetPixelID()]).max
+        upper = np.iinfo(sitkToNpDataTypes[self.img_sitk.GetPixelID()]).max
         img_bc = sitk.Threshold(img + sitk.Cast(bias, img.GetPixelID()),
                     lower=0, upper=upper)
         return img_bc 
