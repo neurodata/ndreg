@@ -20,7 +20,7 @@ From inside the `ndreg` directory: `docker build -t ndreg .` <br/>
 
 In order to use the functionality built into this Docker image, you need to mount your local data volume as follows:
 
-`docker run --rm -v /path/to/your/data:/run/data/ -p 8888:8888 ndreg` <br/>
+`docker run --rm -v /path/to/your/data:/run/data/ -p 8888:8888 neurodata/ndreg` <br/>
 
 This should print a link to the terminal console that looks like this: <br/>
 
@@ -30,7 +30,7 @@ Go to this link in your browser by copying and pasting it. <br/>
 
 All of the data you mounted should be in the `/run/data` directory in the Docker image. Keep in mind that anything added to/deleted from that directory is also added to/deleted from the local machine (not just the Docker image) <br/>
 
-You can look at the sample notebook in this repository to see how to use the two packages `Preprocessor` and `Registerer`
+You can look at the sample notebook in `/run/ndreg/Registration package test.ipynb` to see how to use the two packages `Preprocessor` and `Registerer`
 
 
 
