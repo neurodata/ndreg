@@ -1170,7 +1170,7 @@ def imgAffineComposite(inImg, refImg, scale=1.0, useNearest=False, useMI=False, 
 
     return compositeAffine
 
-def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations=1000, epsilon=None, sigma=1e-4, useNearest=False,
+def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations=1000, epsilon=None, minEpsilon=None, sigma=1e-4, useNearest=False,
                      useBias=False, useMI=False, verbose=False, debug=False, inMask=None, refMask=None, outDirPath=""):
     """
     Performs Metamorphic LDDMM between input and reference images
@@ -1212,6 +1212,10 @@ def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations
             command += " --epsilon {0}".format(epsilon)
         else:
             command += " --epsilon 1e-3"
+
+    if not(minEpsilon is None):
+        command += " --epsilonmin {0}".format(epsilonmin)
+
     if(inMask):
         inMaskPath = outDirPath + "inMask.img"
         imgWrite(inMask, inMaskPath)
@@ -1240,7 +1244,7 @@ def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations
     return (field, invField)
 
 
-def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scaleList=1.0, iterations=1000, epsilonList=None, sigma=1e-4,
+def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scaleList=1.0, iterations=1000, epsilonList=None, minEpsilonList=None, sigma=1e-4,
                               useNearest=False, useBias=False, useMI=False, inMask=None, refMask=None, verbose=True, debug=False, outDirPath=""):
     """
     Performs Metamorphic LDDMM between input and reference images
@@ -1265,6 +1269,11 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
         epsilonList = [float(epsilonList)] * numSteps
     elif epsilonList is None:
         epsilonList = [None] * numSteps
+
+    if isNumber(minEpsilonList):
+        minEpsilonList = [float(minEpsilonList)] * numSteps
+    elif minEpsilonList is None:
+        minEpsilonList = [None] * numSteps
 
     if len(alphaList) != numSteps:
         if len(alphaList) != 1:
@@ -1294,6 +1303,7 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
         beta = betaList[step]
         scale = scaleList[step]
         epsilon = epsilonList[step]
+        minEpsilon = minEpsilonList[step]
         stepDirPath = outDirPath + "step" + str(step) + "/"
         if(verbose):
             print("\nStep {0}: alpha={1}, beta={2}, scale={3}".format(
@@ -1305,6 +1315,7 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
                                              scale,
                                              iterations,
                                              epsilon,
+                                             minEpsilon,
                                              sigma,
                                              useNearest,
                                              useBias,

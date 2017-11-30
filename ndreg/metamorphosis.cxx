@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     cerr<<"\t\t  --mu Mu"<<endl;
     cerr<<"\t\t\t 0 = Disable bias correction"<<endl;
     cerr<<"\t\t  --epsilon LearningRate"<<endl;
+    cerr<<"\t\t  --epsilonmin MinLearningRate"<<endl;
     cerr<<"\t\t  --fraction MinimumInitialEnergyFraction"<<endl;
     cerr<<"\t\t  --steps NumberOfTimesteps"<<endl;
     cerr<<"\t\t  --iterations MaximumNumberOfIterations"<<endl;
@@ -251,6 +252,13 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
     double learningRate;
     parser->GetCommandLineArgument("--epsilon", learningRate);
     metamorphosis->SetLearningRate(learningRate);
+  }
+
+  if(parser->ArgumentExists("--epsilonmin"))
+  {
+    double minLearningRate;
+    parser->GetCommandLineArgument("--epsilonmin", minLearningRate);
+    metamorphosis->SetMinLearningRate(minLearningRate);
   }
 
   if(parser->ArgumentExists("--fraction"))
