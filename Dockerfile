@@ -32,9 +32,16 @@ RUN apt-get update && apt-get -y install \
   libhdf5-dev \
   libinsighttoolkit4-dev \
   libfftw3-dev \
-  icu-devtools \
-  libicu-dev
+  libopenblas-base \
+  libopenblas-dev
+#  icu-devtools \
+#  libicu-dev
 #   vim
+
+#RUN git clone https://github.com/xianyi/OpenBLAS
+#WORKDIR OpenBLAS/
+#RUN make -j16 FC=gfortran
+#RUN make PREFIX=/opt/openblas install
 
 RUN pip install --upgrade pip
 RUN pip install matplotlib SimpleITK numpy psutil pytest
@@ -55,7 +62,8 @@ WORKDIR /work
 ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 WORKDIR /work/ndreg
-RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
+#RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
+RUN cmake . && make && make install
 
 # Clone the registration package repo
 WORKDIR /run
