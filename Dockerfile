@@ -31,9 +31,9 @@ RUN apt-get update && apt-get -y install \
   python-tk \
   libhdf5-dev \
   libinsighttoolkit4-dev \
-  libfftw3-dev
-#   icu-devtools \
-#   libicu-dev \
+  libfftw3-dev \
+  icu-devtools \
+  libicu-dev
 #   vim
 
 RUN pip install --upgrade pip
@@ -58,7 +58,7 @@ WORKDIR /work/ndreg
 RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
 # Clone the registration package repo
-#WORKDIR /run
+WORKDIR /run
 #RUN git clone https://github.com/neurodata/ndreg.git
 
 EXPOSE 8888
