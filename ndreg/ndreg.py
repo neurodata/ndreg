@@ -1214,7 +1214,7 @@ def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations
             command += " --epsilon 1e-3"
 
     if not(minEpsilon is None):
-        command += " --epsilonmin {0}".format(epsilonmin)
+        command += " --epsilonmin {0}".format(minEpsilon)
 
     if(inMask):
         inMaskPath = outDirPath + "inMask.img"
