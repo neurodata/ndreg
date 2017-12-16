@@ -13,7 +13,6 @@ import requests
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from itertools import product
-from landmarks import *
 
 from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import *
@@ -1863,19 +1862,3 @@ def imgMetamorphosisLogParser(logPath):
         dataArray = np.concatenate((dataArray, dataRow), axis=0)
 
     return dataArray
-
-
-def lmkApplyField(inLmk, field, spacing=[1, 1, 1]):
-    # Create transform
-    transform = sitk.DisplacementFieldTransform(dimension)
-    transform.SetInterpolator(sitk.sitkLinear)
-    transform.SetDisplacementField(sitk.Cast(field, sitk.sitkVectorFloat64))
-
-    outLmkList = []
-    for lmk in inLmk.GetLandmarks():
-        name = lmk[0]
-        inPoint = lmk[1:]
-        outPoint = transform.TransformPoint(inPoint)
-        outLmkList += [[name] + list(outPoint)]
-
-    return landmarks(outLmkList, inLmk.spacing)

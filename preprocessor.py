@@ -97,7 +97,9 @@ def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=F
             idx_max = i+1
     connected_comp[ connected_comp != idx_max ] = 0
     mask = connected_comp
-    return connected_comp
+    mask_sitk = sitk.GetImageFromArray(mask)
+    mask_sitk.CopyInformation(img)
+    return mask_sitk
 
 def remove_circle(img, radius=170):
     origin_shift = [0, 0]
