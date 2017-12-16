@@ -70,16 +70,14 @@ def remove_streaks(img, radius=40):
     return img_streak_free
 
 def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=False):
-    if type(img) is sitk.SimpleITK.Image:
-        img = sitk.GetArrayFromImage(img)
     test_mask = None
     if use_triangle:
-        thresh = filters.threshold_triangle(img.astype('uint16'))
-        test_mask = (img > thresh).astype('uint16')
+        test_mask = sitk.GetArrayFromImage(sitk.TriangleThreshold(img, 0, 1))
     elif use_otsu:
-        thresh = filters.threshold_otsu(img.astype('uint16'))
-        test_mask = (img > thresh).astype('uint16')
+        test_mask = sitk.GetArrayFromImage(sitk.OtsuThreshold(img, 0, 1))
     else:
+        if type(img) is sitk.SimpleITK.Image:
+            img = sitk.GetArrayFromImage(img)
         gmix = GaussianMixture(n_components=3, covariance_type='full', init_params='kmeans', verbose=0)
         gmix.fit(img.ravel().reshape(-1, 1))
         covariances = gmix.covariances_
