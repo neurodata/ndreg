@@ -379,7 +379,7 @@ def download_ara(rmt, resolution, type='average'):
     return refImg
 
 def download_image(rmt, collection, experiment, channel, res=0, isotropic=True, ara_res=None):
-    (exp_resource, coord_resource, channel_resource) = ndreg.setup_channel_boss(rmt, collection, experiment, channel)
+    (exp_resource, coord_resource, channel_resource) = setup_channel_boss(rmt, collection, experiment, channel)
     img = imgDownload_boss(rmt, channel_resource, coord_resource, resolution=res, isotropic=isotropic)
     return img
 
