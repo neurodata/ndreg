@@ -4,58 +4,135 @@ import numpy as np
 import SimpleITK as sitk
 import skimage
 
-def register_affine(spacing, iterations=2000.0, resolutions=8.0, use_mi=False, fixed_mask=None, moving_mask=None):
-    # reorient the target to match the source
-    target_reoriented = ndreg.imgReorient(target, targetOrient, sourceOrient)
-    source_ds1 = sitk.Clamp(ndreg.imgResample(source, [spacing]*3), upperBound=ndreg.imgPercentile(source, 0.99))
-    target_ds1 = sitk.Clamp(ndreg.imgResample(target_reoriented, [spacing]*3),
-                           upperBound=ndreg.imgPercentile(target_reoriented, 0.99))
+def register_affine(atlas, img, learning_rate=1e-3, iters=1000, min_step=1e-10, shrink_factors=[2,1],
+            sigmas=[1,1], use_mi=False, grad_tol=1e-8):
+    registration_method = sitk.ImageRegistrationMethod()
 
-    # normalize
-    target_ds = _normalize_image(target_ds1)
-    source_ds = _normalize_image(source_ds1)
+    # Similarity metric settings.
+#     registration_method.SetMetricAsMeanSquares()
+    if use_mi: registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=128)
+    else: registration_method.SetMetricAsMeanSquares()
+    # registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
+    # registration_method.SetMetricSamplingPercentage(0.01)
 
-    movingImage = source_ds
-    fixedImage = target_ds
+    registration_method.SetInterpolator(sitk.sitkBSpline)
 
-    # set parameters
-    affineParameterMap = sitk.GetDefaultParameterMap('affine')
-#         affineParameterMap['MaximumNumberOfSamplingAttempts'] = '0'
+    # Optimizer settings.
+    registration_method.SetOptimizerAsRegularStepGradientDescent(learningRate=learning_rate,
+                                                                 minStep=min_step,
+    #                                                              estimateLearningRate=registration_method.EachIteration,
+                                                                 gradientMagnitudeTolerance=grad_tol,
+                                                                 numberOfIterations=iters)
+    registration_method.SetOptimizerScalesFromPhysicalShift()
+
+    # Setup for the multi-resolution framework.            
+    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=shrink_factors)
+    registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=sigmas)
+    registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+
+    # initial transform
+    initial_transform = sitk.AffineTransform(3)
+    length = np.array(atlas_ds.GetSize())*np.array(atlas_ds.GetSpacing())
+    initial_transform.SetCenter(length/2.0)
+
+    # Don't optimize in-place, we would possibly like to run this cell multiple times.
+    registration_method.SetInitialTransform(initial_transform)
+
+    # Connect all of the observers so that we can perform plotting during registration.
+    registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
+    registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
+    registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, update_multires_iterations) 
+    registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plot_values(registration_method))
+
+    final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
+                                                  sitk.Cast(atlas, sitk.sitkFloat32))
+    return final_transform
+
+# def register_affine(source, target, source_orientation, target_orientation, spacing, iterations=2000.0, resolutions=8.0,
+#                     use_mi=False, fixed_mask=None, moving_mask=None, normalize=True, pad=20):
+    
+#     # reorient the target to match the source
+#     percentile = 0.99999
+#     target_reoriented = ndreg.imgReorient(target, target_orientation, source_orientation)
+#     target_ds = sitk.Clamp(ndreg.imgResample(target_reoriented, spacing=[spacing]*3),
+#                            upperBound=ndreg.imgPercentile(target_reoriented, percentile))
+#     source_ds = sitk.Clamp(ndreg.imgResample(source, spacing=[spacing]*3),
+#                            upperBound=ndreg.imgPercentile(source, percentile))
+
+#     # normalize
+#     if normalize:
+#         target_ds = _normalize_image(target_ds)
+#         source_ds = _normalize_image(source_ds)
+
+#     movingImage = source_ds
+#     fixedImage = target_ds
+
+#     # set parameters
+#     affineParameterMap = sitk.GetDefaultParameterMap('affine')
+# #         affineParameterMap['MaximumNumberOfSamplingAttempts'] = '0'
+# #         affineParameterMap['Metric'] = ['AdvancedMeanSquares']
+#     affineParameterMap['MaximumNumberOfIterations'] = ['{}'.format(iterations)]
+#     affineParameterMap['Optimizer'] = ['StandardGradientDescent']
+#     affineParameterMap['NumberOfResolutions'] = '{}'.format(resolutions)
+# #         affineParameterMap['ShowExactMetricValue'] = ['true']
+# #     affineParameterMap['AutomaticTransformInitialization'] = ['true']
+# #     affineParameterMap['AutomaticScalesEstimation'] = ['true']
+        
+#     if not use_mi:
 #         affineParameterMap['Metric'] = ['AdvancedMeanSquares']
-    affineParameterMap['MaximumNumberOfIterations'] = ['{}'.format(iterations)]
-    affineParameterMap['Optimizer'] = ['StandardGradientDescent']
-    affineParameterMap['NumberOfResolutions'] = '{}'.format(resolutions)
-#         affineParameterMap['ShowExactMetricValue'] = ['true']
-#         affineParameterMap['AutomaticTransformInitialization'] = ['true']
-    if not use_mi:
-        affineParameterMap['Metric'] = ['AdvancedMeanSquares']
-#             movingImage = source_ds1
-#             fixedImage = target_ds1
 
-    # initialize registration object
-    elastixImageFilter = sitk.ElastixImageFilter()
-    # set source and target images
-    elastixImageFilter.SetFixedImage(fixedImage)
-    elastixImageFilter.SetMovingImage(movingImage)
-    # set masks
-    if fixed_mask is not None: 
-        elastixImageFilter.SetFixedMask(fixed_mask)
-    if moving_mask is not None:
-        elastixImageFilter.SetMovingMask(moving_mask)
-    # set parameter map
-    elastixImageFilter.SetParameterMap(affineParameterMap)
-    # run the registration
-    elastixImageFilter.Execute()
-    elastix_img_filt = elastixImageFilter
-    # get the affine transformed source image
-    source_affine = elastixImageFilter.GetResultImage()
-    transformParameterMap = elastixImageFilter.GetTransformParameterMap()[0] 
-    # save the affine transformation
-    affine = [float(i) for i in transformParameterMap['TransformParameters']]
-    return source_affine
+#     # initialize registration object
+#     elastixImageFilter = sitk.ElastixImageFilter()
+#     # set masks
+#     if fixed_mask is not None:
+#         fm_reoriented = ndreg.imgReorient(fixed_mask, target_orientation, source_orientation)
+#         elastixImageFilter.SetFixedMask(fm_reoriented)
+#     if moving_mask is not None:
+# #         mm_reoriented = ndreg.imgReorient(moving_mask, source_orientation, source_orientation)
+#         elastixImageFilter.SetMovingMask(moving_mask)
+#     # set parameter map
+#     elastixImageFilter.SetParameterMap(affineParameterMap)
+    
+#     if pad:
+#         movingImage = sitk.ConstantPad(source_ds, [pad]*3, [pad]*3, 0)
+#         fixedImage = sitk.ConstantPad(target_ds, [pad]*3, [pad]*3, 0)
+#         moving_mask = sitk.ConstantPad(sitk.GetImageFromArray(np.ones(source_ds.GetSize()[::-1])),
+#                                         [pad]*3, [pad]*3, 0)
+#         fixed_mask = sitk.ConstantPad(sitk.GetImageFromArray(np.ones(target_ds.GetSize()[::-1])),
+#                                         [pad]*3, [pad]*3, 0)
+#         moving_mask.CopyInformation(movingImage)
+#         fixed_mask.CopyInformation(fixedImage)
+#         elastixImageFilter.SetFixedMask(sitk.Cast(fixed_mask, sitk.sitkUInt8))
+#         elastixImageFilter.SetMovingMask(sitk.Cast(moving_mask, sitk.sitkUInt8))
+#     # set source and target images
+#     elastixImageFilter.SetFixedImage(fixedImage)
+#     elastixImageFilter.SetMovingImage(movingImage)
+#     print("source image set! spacing: {}, size: {}".format(movingImage.GetSpacing(), movingImage.GetSize()))
+#     ndreg.imgShow(movingImage, vmax=ndreg.imgPercentile(movingImage, 0.99))
+#     print("target image set! spacing: {}, size: {}".format(fixedImage.GetSpacing(), fixedImage.GetSize()))
+#     ndreg.imgShow(fixedImage, vmax=ndreg.imgPercentile(fixedImage, 0.99))
+#     if moving_mask and fixed_mask:
+#         print("source mask set! spacing: {}, size: {}".format(moving_mask.GetSpacing(), moving_mask.GetSize()))
+#         ndreg.imgShow(moving_mask)
+#         print("target mask set! spacing: {}, size: {}".format(fixedImage.GetSpacing(), fixedImage.GetSize()))
+#         ndreg.imgShow(fixed_mask)
+# #         elastixImageFilter.SetParameter('Resampler', 'RandomSparseMask')
+# #     ndreg.imgShow(movingImage, vmax=ndreg.imgPercentile(movingImage, 0.99))
+#     # run the registration
+#     elastixImageFilter.SetLogToConsole(True)
+    
+#     elastixImageFilter.Execute()
+# #     elastix_img_filt = elastixImageFilter
+#     # get the affine transformed source image
+#     source_affine = elastixImageFilter.GetResultImage()
+#     transformParameterMap = elastixImageFilter.GetTransformParameterMap()[0] 
+#     # save the affine transformation
+#     affine = [float(i) for i in transformParameterMap['TransformParameters']]
+#     return elastixImageFilter
 
 def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25], 
-                   epsilon_list=1e-7, sigma=None, use_mi=False, iterations=200, inMask=None, verbose=True, out_dir=''):
+                   epsilon_list=1e-7, min_epsilon_list=1e-15, sigma=None, use_mi=False, iterations=200, inMask=None,
+                   verbose=True, out_dir=''):
     if sigma == None:
         sigma = (0.1/target_img.GetNumberOfPixels())
 
@@ -63,23 +140,24 @@ def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 
                                                         alphaList=alpha_list,
                                                         scaleList=scale_list,
                                                         epsilonList=epsilon_list,
+                                                        minEpsilonList=min_epsilon_list,
                                                         sigma=sigma,
                                                         useMI=use_mi,
                                                         inMask=inMask,
                                                         iterations=iterations, 
                                                         verbose=verbose,
                                                         outDirPath=out_dir)
-    affineField = ndreg.affineToField(affine, field.GetSize(), field.GetSpacing())
-    fieldComposite = ndreg.fieldApplyField(field, affineField)
+#     affineField = ndreg.affineToField(affine, field.GetSize(), field.GetSpacing())
+#     fieldComposite = ndreg.fieldApplyField(field, affineField)
 
-    invAffineField = ndreg.affineToField(ndreg.affineInverse(affine), invField.GetSize(),
-                                         invField.GetSpacing())
-    invFieldComposite = ndreg.fieldApplyField(invAffineField, invField)
+#     invAffineField = ndreg.affineToField(ndreg.affineInverse(affine), invField.GetSize(),
+#                                          invField.GetSpacing())
+#     invFieldComposite = ndreg.fieldApplyField(invAffineField, invField)
 
     source_lddmm = ndreg.imgApplyField(affine_img, field, 
                                             size=target_img.GetSize(), 
                                             spacing=target_img.GetSpacing())
-    return source_lddmm
+    return source_lddmm, field, invField
 
 def checkerboard_image(vmax=None):
     if vmax == None:
@@ -103,9 +181,9 @@ def evaluate_affine_registration(source_fiducial_file, target_fiducial_file, sca
     # reorient the source fiducials so they match the orientation of
     # source we calculated transformation on. then we can apply our transformations.
     landmarks_source_r = _reorient_landmarks(landmarks_source, orientation_source_fid, 
-                                                           sourceOrient, source)
+                                                           source_orientation, source)
     landmarks_source_a = _apply_affine(landmarks_source_r)
-    landmarks_source_ar = _reorient_landmarks(landmarks_source_a, sourceOrient, 
+    landmarks_source_ar = _reorient_landmarks(landmarks_source_a, source_orientation, 
                                                    orientation_target_fid, target)
     mse = _compute_error(landmarks_source_ar, landmarks_target)
     return mse
@@ -117,10 +195,10 @@ def evaluate_lddmm_registration(source_fiducial_file, target_fiducial_file, scal
     landmarks_source = _parse_fiducial_file(source_fiducial_file, scale_source)
     landmarks_target = _parse_fiducial_file(target_fiducial_file, scale_target)
     landmarks_source_r = _reorient_landmarks(landmarks_source, orientation_source_fid, 
-                                                  sourceOrient, source)
+                                                  source_orientation, source)
     landmarks_source_a = _apply_affine(landmarks_source_r)
     landmarks_target_r = _reorient_landmarks(landmarks_target, orientation_target_fid,
-                                                  sourceOrient, target)
+                                                  source_orientation, target)
     landmarks_target_lddmm = _lmk_apply_field(landmarks_target_r, field)
     mse = _compute_error(np.array(landmarks_target_lddmm), np.array(landmarks_source_a))
     return mse
@@ -253,3 +331,80 @@ def _normalize_image(img, low_bound=None, up_bound=0.999):
     max_val = ndreg.imgPercentile(img, up_bound)
 
     return (img - min_val)/(max_val - min_val)
+    
+
+# Utility functions for plotting
+
+# import matplotlib.pyplot as plt
+# %matplotlib inline
+
+from ipywidgets import interact, fixed
+from IPython.display import clear_output
+
+# Callback invoked by the interact IPython method for scrolling through the image stacks of
+# the two images (moving and fixed).
+def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
+    # Create a figure with two subplots and the specified size.
+    plt.subplots(1,2,figsize=(10,8))
+    
+    # Draw the fixed image in the first subplot.
+    plt.subplot(1,2,1)
+    plt.imshow(fixed_npa[fixed_image_z,:,:],cmap=plt.cm.Greys_r);
+    plt.title('fixed image')
+    plt.axis('off')
+    
+    # Draw the moving image in the second subplot.
+    plt.subplot(1,2,2)
+    plt.imshow(moving_npa[moving_image_z,:,:],cmap=plt.cm.Greys_r);
+    plt.title('moving image')
+    plt.axis('off')
+    
+    plt.show()
+
+# Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
+# of an image stack of two images that occupy the same physical space. 
+def display_slices_with_alpha(fixed, moving, alpha, vmax):
+    img = (1.0 - alpha)*fixed + alpha*moving
+    plt.imshow(sitk.GetArrayViewFromImage(img),cmap=plt.cm.Greys_r, vmax=vmax);
+    plt.axis('off')
+    plt.show()
+def display_images_with_alpha(slice_num, alpha, fixed, moving, axis=2, vmax=1000):
+    if axis == 0: display_slices_with_alpha(fixed[slice_num,:,:], moving[slice_num,:,:], alpha, vmax)
+    elif axis == 1: display_slices_with_alpha(fixed[:,slice_num,:], moving[:,slice_num,:], alpha, vmax)
+    else: display_slices_with_alpha(fixed[:,:,slice_num], moving[:,:,slice_num], alpha, vmax)
+    
+# Callback invoked when the StartEvent happens, sets up our new data.
+def start_plot():
+    global metric_values, multires_iterations
+    
+    metric_values = []
+    multires_iterations = []
+
+# Callback invoked when the EndEvent happens, do cleanup of data and figure.
+def end_plot():
+    global metric_values, multires_iterations
+    
+    del metric_values
+    del multires_iterations
+    # Close figure, we don't want to get a duplicate of the plot latter on.
+    plt.close()
+
+# Callback invoked when the IterationEvent happens, update our data and display new figure.    
+def plot_values(registration_method):
+    global metric_values, multires_iterations
+    
+    metric_values.append(registration_method.GetMetricValue())                                       
+    # Clear the output area (wait=True, to reduce flickering), and plot current data
+    clear_output(wait=True)
+    # Plot the similarity metric values
+    plt.plot(metric_values, 'r')
+    plt.plot(multires_iterations, [metric_values[index] for index in multires_iterations], 'b*')
+    plt.xlabel('Iteration Number',fontsize=12)
+    plt.ylabel('Metric Value',fontsize=12)
+    plt.show()
+    
+# Callback invoked when the sitkMultiResolutionIterationEvent happens, update the index into the 
+# metric_values list. 
+def update_multires_iterations():
+    global metric_values, multires_iterations
+    multires_iterations.append(len(metric_values))  

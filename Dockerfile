@@ -1,23 +1,9 @@
 FROM ubuntu:16.04
 
-RUN apt-get update
-RUN apt-get install -y python python-dev git build-essential cmake gcc
-RUN git clone https://github.com/SuperElastix/SimpleElastix
-RUN mkdir build
-
-WORKDIR build
-
-RUN cmake ../SimpleElastix/SuperBuild
-RUN make -j16   
-
-WORKDIR /build/SimpleITK-build/Wrapping/Python/Packaging
-RUN python setup.py install 
-
-WORKDIR /run
-
-RUN apt-get -y upgrade && apt-get -y install build-essential
+RUN apt-get -y upgrade
 
 RUN apt-get update && apt-get -y install \
+  build-essential \
   python-pip \
   python-all-dev \
   zlib1g-dev \
@@ -33,10 +19,29 @@ RUN apt-get update && apt-get -y install \
   libinsighttoolkit4-dev \
   libfftw3-dev \
   libopenblas-base \
-  libopenblas-dev
+  libopenblas-dev \ 
+  python \
+  python-dev \
+  git \
+  build-essential \
+  cmake \
+  gcc
 #  icu-devtools \
 #  libicu-dev
 #   vim
+
+RUN git clone https://github.com/SuperElastix/SimpleElastix
+RUN mkdir build
+
+WORKDIR build
+
+RUN cmake ../SimpleElastix/SuperBuild
+RUN make -j16   
+
+WORKDIR /build/SimpleITK-build/Wrapping/Python/Packaging
+RUN python setup.py install 
+
+WORKDIR /run
 
 #RUN git clone https://github.com/xianyi/OpenBLAS
 #WORKDIR OpenBLAS/
@@ -44,7 +49,7 @@ RUN apt-get update && apt-get -y install \
 #RUN make PREFIX=/opt/openblas install
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib SimpleITK numpy psutil pytest
+RUN pip install matplotlib SimpleITK numpy psutil pytest tifffile
 
 # We currently following 'master' to incorperate many recent bug fixes.
 # When stable, use the following instead:
@@ -62,8 +67,8 @@ WORKDIR /work
 ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 WORKDIR /work/ndreg
-#RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
-RUN cmake . && make && make install
+RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
+#RUN cmake . && make && make install
 
 # Clone the registration package repo
 WORKDIR /run

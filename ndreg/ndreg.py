@@ -343,6 +343,49 @@ def imgUpload_boss(
         print('Exception occurred: {}'.format(e))
         raise(e)
 
+def create_channel_resource(rmt, chan_name, coll_name, exp_name, type='image', 
+                            base_resolution=0, sources=[], datatype='uint16', new_channel=True):
+    channel_resource = ChannelResource(chan_name, coll_name, exp_name, type=type,
+                                       base_resolution=base_resolution, sources=sources, datatype=datatype)
+    if new_channel: 
+        new_rsc = rmt.create_project(channel_resource)
+        return new_rsc
+
+    return channel_resource
+
+def upload_to_boss(rmt, data, channel_resource, resolution=0):
+    Z_LOC = 0
+    size = data.shape
+    for i in range(0, data.shape[Z_LOC], 16):
+        last_z = i+16
+        if last_z > data.shape[Z_LOC]:
+            last_z = data.shape[Z_LOC]
+        print(resolution, [0, size[2]], [0, size[1]], [i, last_z])
+        rmt.create_cutout(channel_resource, resolution, 
+                          [0, size[2]], [0, size[1]], [i, last_z], 
+                          np.asarray(data[i:last_z,:,:], order='C'))
+
+def download_ara(rmt, resolution, type='average'):
+    if resolution not in [10, 25, 50, 100]:
+        print('Please provide a resolution that is among the following: 10, 25, 50, 100')
+        return
+    REFERENCE_COLLECTION = 'ara_2016'
+    REFERENCE_EXPERIMENT = 'sagittal_{}um'.format(resolution)
+    REFERENCE_COORDINATE_FRAME = 'ara_2016_{}um'.format(resolution) 
+    REFERENCE_CHANNEL = '{}_{}um'.format(type, resolution)
+
+    refImg = download_image(rmt, REFERENCE_COLLECTION, REFERENCE_EXPERIMENT, REFERENCE_CHANNEL, ara_res=resolution)
+
+    return refImg
+
+def download_image(rmt, collection, experiment, channel, res=0, isotropic=True, ara_res=None):
+    (exp_resource, coord_resource, channel_resource) = ndreg.setup_channel_boss(rmt, collection, experiment, channel)
+    img = imgDownload_boss(rmt, channel_resource, coord_resource, resolution=res, isotropic=isotropic)
+    return img
+
+
+
+        
 
 def imgCopy(img):
     """
@@ -417,7 +460,7 @@ def imgResample(img, spacing, size=[], useNearest=False,
                 "len(origin) != " + str(img.GetDimension()))
 
     # Resample input image
-    interpolator = [sitk.sitkLinear, sitk.sitkNearestNeighbor][useNearest]
+    interpolator = [sitk.sitkBSpline, sitk.sitkNearestNeighbor][useNearest]
     identityTransform = sitk.Transform()
     identityDirection = list(
         sitk.AffineTransform(

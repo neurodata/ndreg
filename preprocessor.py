@@ -20,17 +20,6 @@ sitkToNpDataTypes = {sitk.sitkUInt8: np.uint8,
                      sitk.sitkFloat64: np.float64,
                      }
 
-# class Preprocessor:
-
-#     def __init__( img):
-#         if type(img) == sitk.SimpleITK.Image:
-#             img_sitk = img
-#             img_np = sitk.GetArrayFromImage(img)
-#             img_no_circle = None
-#             mask = None
-#         else: 
-#             raise Exception("Please convert your image into a SimpleITK image")
-
 def remove_streaks(img, radius=40):
     if type(img) is sitk.SimpleITK.Image:
         img = sitk.GetArrayFromImage(img)
@@ -80,12 +69,15 @@ def remove_streaks(img, radius=40):
 #         img_streak_free_sitk.SetDirection(img_sitk.GetDirection())
     return img_streak_free
 
-def create_mask(img, background_probability=0.75, use_triangle=False):
+def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=False):
     if type(img) is sitk.SimpleITK.Image:
         img = sitk.GetArrayFromImage(img)
     test_mask = None
     if use_triangle:
         thresh = filters.threshold_triangle(img.astype('uint16'))
+        test_mask = (img > thresh).astype('uint16')
+    elif use_otsu:
+        thresh = filters.threshold_otsu(img.astype('uint16'))
         test_mask = (img > thresh).astype('uint16')
     else:
         gmix = GaussianMixture(n_components=3, covariance_type='full', init_params='kmeans', verbose=0)
@@ -95,7 +87,7 @@ def create_mask(img, background_probability=0.75, use_triangle=False):
         covariance_background = covariances[np.where( gmix.means_ == mean_background ) ][0][0]
         z_score = st.norm.ppf(background_probability)
         threshold = z_score * np.sqrt(covariance_background) + mean_background
-        test_mask = (img_no_circle > threshold)
+        test_mask = (img > threshold)
     eroded_im = morphology.opening(test_mask, selem=morphology.ball(2))
     connected_comp = skimage.measure.label(eroded_im)
     out = skimage.measure.regionprops(connected_comp)
@@ -131,8 +123,8 @@ def remove_circle(img, radius=170):
 #         return correct_bias_field(img=out_img)
 
 
-def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=3, niters=[50, 50, 50, 50],
-                      num_control_pts=[4, 4, 4], fwhm=0.150):
+def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, niters=[50, 50, 50, 50],
+                      num_control_pts=[5, 5, 5], fwhm=0.150):
     """
     Bias corrects an image using the N4 algorithm
     """
@@ -183,3 +175,46 @@ def create_iterative_mask(img):
         plt.imshow(img_bc_np[80,:,:], vmax=10000)
         plt.colorbar()
         plt.show()
+    
+    mask_sitk = sitk.GetImageFromArray(out_mask)
+    mask_sitk.CopyInformation(img)
+    return 
+
+# utility functions
+
+def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True):
+    """
+    make sure img1 is the source and img2 is the target.
+    iamges will be resampled to match the coordinate system of img2.
+    """
+    target_r = ndreg.imgReorient(target, target_orient, atlas_orient)
+    size_atlas = atlas.GetSize()
+    size_target = target_r.GetSize()
+    dims_atlas = np.array(size_atlas)*np.array(atlas.GetSpacing())
+    dims_target = np.array(size_target)*np.array(target_r.GetSpacing())
+#     print(dims_target)
+    max_size_per_dim = [max(dims_atlas[i], dims_target[i]) for i in range(len(dims_atlas))]
+    print(max_size_per_dim)
+    vox_sizes = [int(i) for i in (np.array(max_size_per_dim) / spacing)]
+#     print(vox_sizes)
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetInterpolator(sitk.sitkBSpline)
+    resampler.SetSize(vox_sizes)
+    resampler.SetOutputSpacing([spacing]*3)
+#     resampler.SetOutputOrigin((np.array(max_size_per_dim)/2.0).tolist())
+
+    out_origin = (np.array(max_size_per_dim)/2.0).tolist()
+    out_target = resampler.Execute(target_r)
+#     out_target.SetOrigin(out_origin)
+    out_atlas = resampler.Execute(atlas)
+#     out_atlas.SetOrigin(out_origin)
+    
+    assert(out_target.GetOrigin() == out_atlas.GetOrigin())
+    assert(out_target.GetSize() == out_atlas.GetSize())
+    assert(out_target.GetSpacing() == out_atlas.GetSpacing())
+    return out_atlas, out_target
+
+def normalize(img):
+    max_val = ndreg.imgPercentile(img, 0.999)
+    return sitk.Clamp(img, upperBound=max_val) / max_val
+    
