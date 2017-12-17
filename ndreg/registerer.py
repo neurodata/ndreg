@@ -32,7 +32,7 @@ def register_affine(atlas, img, learning_rate=1e-3, iters=1000, min_step=1e-10, 
 
     # initial transform
     initial_transform = sitk.AffineTransform(3)
-    length = np.array(atlas_ds.GetSize())*np.array(atlas_ds.GetSpacing())
+    length = np.array(atlas.GetSize())*np.array(atlas.GetSpacing())
     initial_transform.SetCenter(length/2.0)
 
     # Don't optimize in-place, we would possibly like to run this cell multiple times.
