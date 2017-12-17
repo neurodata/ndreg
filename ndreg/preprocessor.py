@@ -218,3 +218,5 @@ def normalize(img):
     max_val = ndreg.imgPercentile(img, 0.999)
     return sitk.Clamp(img, upperBound=max_val) / max_val
     
+def whiten(image, radius=[15,15,15], alpha=0.3, beta=0.3):
+    return sitk.AdaptiveHistogramEqualization(image, radius, alpha, beta)

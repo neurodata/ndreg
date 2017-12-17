@@ -408,3 +408,11 @@ def plot_values(registration_method):
 def update_multires_iterations():
     global metric_values, multires_iterations
     multires_iterations.append(len(metric_values))  
+    
+def resample(image, transform, ref_img, default_value=0.0):
+    # Output image Origin, Spacing, Size, Direction are taken from the reference
+    # image in this call to Resample
+    reference_image = ref_img
+    interpolator = sitk.sitkBSpline
+    return sitk.Resample(image, reference_image, transform,
+                         interpolator, default_value)
