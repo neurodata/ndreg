@@ -8,8 +8,14 @@ import io
 import os
 import sys
 from shutil import rmtree
+import re
+import sysconfig
+import platform
+import subprocess
 
-from setuptools import find_packages, setup, Command
+from distutils.version import LooseVersion
+from setuptools import setup, Extension, find_packages, setup, Command
+from setuptools.command.build_ext import build_ext
 
 # Package meta-data.
 NAME = 'mypackage'
