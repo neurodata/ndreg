@@ -30,18 +30,18 @@ RUN apt-get update && apt-get -y install \
 #  libicu-dev
 #   vim
 
-RUN git clone https://github.com/SuperElastix/SimpleElastix
-RUN mkdir build
-
-WORKDIR build
-
-RUN cmake ../SimpleElastix/SuperBuild
-RUN make -j16   
-
-WORKDIR /build/SimpleITK-build/Wrapping/Python/Packaging
-RUN python setup.py install 
-
-WORKDIR /run
+#RUN git clone https://github.com/SuperElastix/SimpleElastix
+#RUN mkdir build
+#
+#WORKDIR build
+#
+#RUN cmake ../SimpleElastix/SuperBuild
+#RUN make -j16   
+#
+#WORKDIR /build/SimpleITK-build/Wrapping/Python/Packaging
+#RUN python setup.py install 
+#
+#WORKDIR /run
 
 #RUN git clone https://github.com/xianyi/OpenBLAS
 #WORKDIR OpenBLAS/

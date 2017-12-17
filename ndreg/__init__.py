@@ -1,5 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from . import ndreg
+from .ndreg import *
 from . import preprocessor
 from . import registerer
