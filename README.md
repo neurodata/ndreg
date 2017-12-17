@@ -1,7 +1,25 @@
 # ndreg
 Package that performs affine and LDDMM registration *easily* <br/>
 
-# Installation
+# Sytem Requirements
+
+### Software Dependencies (with version numbers)
+
+### Versions tested on
+
+# Installation Guide
+
+### Instructions
+
+### Typical install time
+
+# Demo
+
+### Instructions to run on data
+
+### Expected Output
+
+### Expected run time for demo
 
 ## Easy way
 
