@@ -68,11 +68,8 @@ ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.j
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 WORKDIR /work/ndreg
 RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
-#RUN cmake . && make && make install
 
-# Clone the registration package repo
 WORKDIR /run
-#RUN git clone https://github.com/neurodata/ndreg.git
-
+RUN cp /work/ndreg/ndreg_demo.ipynb ./
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
