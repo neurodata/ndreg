@@ -419,3 +419,6 @@ def resample(image, transform, ref_img, default_value=0.0):
     interpolator = sitk.sitkBSpline
     return sitk.Resample(image, reference_image, transform,
                          interpolator, default_value)
+def view_overlay(img1, img2, axis=2, vmax=1000):
+    interact(display_images_with_alpha, slice_num=(0,img1.GetSize()[axis]), alpha=(0.0,1.0,0.05), 
+             fixed = fixed(img2), moving=fixed(img1), axis=(0,2,1), vmax=(1,vmax));
