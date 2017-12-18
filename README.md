@@ -1,44 +1,41 @@
 # ndreg
 Package that performs affine and LDDMM registration *easily* <br/>
 
-# Sytem Requirements
+## Sytem Requirements
+
+The recommended way to use this package is to install [Docker](https://store.docker.com/search?offering=community&type=edition). Docker is currently available on OS X El Capitan 10.11 and newer macOS releases, the following Ubuntu versions: Zesty 17.04 (LTS), Yakkety 16.10, Xenial 16.04 (LTS), Trusty 14.04 (LTS), and Windows 10.
 
 ### Software Dependencies (with version numbers)
 
+External libraries: <br/>
+Insight Segmentation and Registration Toolkit (ITK) -- 4.12.2
+
+Python depedencies: <br/>
+jupyter -- (1.0.0)
+numpy -- (1.13.3)
+scikit-image -- (0.13.1)
+scikit-learn -- (0.19.1)
+scipy -- (1.0.0)
+SimpleITK -- (1.0.1)
+
 ### Versions tested on
+We have tested the Docker image and build on macOS High Sierra (on MacBook Pro with 2.9 GHz Intel Core i7 and 16 GB RAM) and Ubuntu Xenial 16.04.3 LTS.
 
-# Installation Guide
+## Installation Guide
 
-### Instructions
-
-### Typical install time
-
-# Demo
-
-### Instructions to run on data
-
-### Expected Output
-
-### Expected run time for demo
-
-## Easy way
-
-Pull image from Docker Hub (link [here](https://hub.docker.com/r/neurodata/ndreg)) <br/>
+Once Docker is installed on your machine, pull the `neurodata/ndreg` image from Docker Hub [here](https://hub.docker.com/r/neurodata/ndreg) as follows: <br/>
 
 `docker pull neurodata/ndreg` <br/>
 
-## Hard way
+It will typically take around 3 minutes to pull the entire image.
 
-Build image from Dockerfile <br/>
+## Demo
 
-First clone this repository: `git clone git@github.com:neurodata/ndreg.git` <br/>
-From inside the `ndreg` directory: `docker build -t ndreg .` <br/>
+### Instructions to run on data
 
-# Running
+In order to use the functionality built into this Docker image, you need to run the Docker image:
 
-In order to use the functionality built into this Docker image, you need to mount your local data volume as follows:
-
-`docker run --rm -v /path/to/your/data:/run/data/ -p 8888:8888 neurodata/ndreg` <br/>
+`docker run -p 8888:8888 neurodata/ndreg` <br/>
 
 This should print a link to the terminal console that looks like this: <br/>
 
@@ -46,10 +43,11 @@ This should print a link to the terminal console that looks like this: <br/>
 
 Go to this link in your browser by copying and pasting it. <br/>
 
-All of the data you mounted should be in the `/run/data` directory in the Docker image. Keep in mind that anything added to/deleted from that directory is also added to/deleted from the local machine (not just the Docker image) <br/>
+### Expected Output
 
-You can look at the sample notebook in `/run/ndreg/Registration package test.ipynb` to see how to use the two packages `Preprocessor` and `Registerer`
+### Expected run time for demo
 
+# Running
 
 
 
