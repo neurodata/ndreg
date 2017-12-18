@@ -54,9 +54,3 @@ The expected run time for this demo is < 5 seconds.
 The last 2 cells in the demo notebook should look like the same imnage. This indicates that the registration process was a sucess!
 
 ## Congrats, you've succesfully run ndreg!
-### Expected run time for demo
-
-# Running
-
-
-
