@@ -8,15 +8,15 @@ The recommended way to use this package is to install [Docker](https://store.doc
 ### Software Dependencies (with version numbers)
 
 External libraries: <br/>
-Insight Segmentation and Registration Toolkit (ITK) -- 4.12.2
+- Insight Segmentation and Registration Toolkit (ITK) -- 4.12.2
 
 Python depedencies: <br/>
-jupyter -- (1.0.0)
-numpy -- (1.13.3)
-scikit-image -- (0.13.1)
-scikit-learn -- (0.19.1)
-scipy -- (1.0.0)
-SimpleITK -- (1.0.1)
+- jupyter -- (1.0.0)
+- numpy -- (1.13.3)
+- scikit-image -- (0.13.1)
+- scikit-learn -- (0.19.1)
+- scipy -- (1.0.0)
+- SimpleITK -- (1.0.1)
 
 ### Versions tested on
 We have tested the Docker image and build on macOS High Sierra (on MacBook Pro with 2.9 GHz Intel Core i7 and 16 GB RAM) and Ubuntu Xenial 16.04.3 LTS.
