@@ -3,9 +3,11 @@ import csv
 import numpy as np
 import SimpleITK as sitk
 import skimage
+import matplotlib
+from matplotlib import pyplot as plt
 
-def register_affine(atlas, img, learning_rate=1e-3, iters=1000, min_step=1e-10, shrink_factors=[2,1],
-            sigmas=[1,1], use_mi=False, grad_tol=1e-8):
+def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1],
+            sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
     registration_method = sitk.ImageRegistrationMethod()
 
     # Similarity metric settings.
@@ -31,7 +33,7 @@ def register_affine(atlas, img, learning_rate=1e-3, iters=1000, min_step=1e-10, 
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
 
     # initial transform
-    initial_transform = sitk.AffineTransform(3)
+    initial_transform = sitk.AffineTransform(atlas.GetDimension())
     length = np.array(atlas.GetSize())*np.array(atlas.GetSpacing())
     initial_transform.SetCenter(length/2.0)
 
@@ -39,10 +41,11 @@ def register_affine(atlas, img, learning_rate=1e-3, iters=1000, min_step=1e-10, 
     registration_method.SetInitialTransform(initial_transform)
 
     # Connect all of the observers so that we can perform plotting during registration.
-    registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
-    registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
-    registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, update_multires_iterations) 
-    registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plot_values(registration_method))
+    if verbose:
+        registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
+        registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plot_values(registration_method))
 
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
