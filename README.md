@@ -7,6 +7,8 @@ The recommended way to use this package is to install [Docker](https://store.doc
 
 ### Software Dependencies (with version numbers)
 
+The only software dependency needed if using the recommended method is Docker. The following dependencies are included in the Docker Image.
+
 External libraries: <br/>
 - Insight Segmentation and Registration Toolkit (ITK) -- 4.12.2
 
@@ -27,7 +29,7 @@ Once Docker is installed on your machine, pull the `neurodata/ndreg` image from 
 
 `docker pull neurodata/ndreg` <br/>
 
-It will typically take around 3 minutes to pull the entire image.
+It will typically take around 3 minutes to pull the entire Docker image.
 
 ## Demo
 
