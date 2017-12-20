@@ -540,24 +540,24 @@ def imgResample(img, spacing, size=[], useNearest=False,
 #    return outImg
 #
 #
-#def createTmpRegistration(inMask=None, refMask=None,
-#                          samplingFraction=1.0, dimension=dimension):
-#    identityTransform = sitk.Transform(dimension, sitk.sitkIdentity)
-#    tmpRegistration = sitk.ImageRegistrationMethod()
-#    tmpRegistration.SetInterpolator(sitk.sitkNearestNeighbor)
-#    tmpRegistration.SetInitialTransform(identityTransform)
-#    tmpRegistration.SetOptimizerAsGradientDescent(
-#        learningRate=1e-14, numberOfIterations=1)
-#    if samplingFraction != 1.0:
-#        tmpRegistration.SetMetricSamplingPercentage(samplingFraction)
-#        tmpRegistration.SetMetricSamplingPercentage(tmpRegistration.RANDOM)
-#
-#    if(inMask):
-#        tmpRegistration.SetMetricMovingMask(inMask)
-#    if(refMask):
-#        tmpRregistration.SetMetricFixedMask(refMask)
-#
-#    return tmpRegistration
+def createTmpRegistration(inMask=None, refMask=None,
+                          samplingFraction=1.0, dimension=dimension):
+    identityTransform = sitk.Transform(dimension, sitk.sitkIdentity)
+    tmpRegistration = sitk.ImageRegistrationMethod()
+    tmpRegistration.SetInterpolator(sitk.sitkNearestNeighbor)
+    tmpRegistration.SetInitialTransform(identityTransform)
+    tmpRegistration.SetOptimizerAsGradientDescent(
+        learningRate=1e-14, numberOfIterations=1)
+    if samplingFraction != 1.0:
+        tmpRegistration.SetMetricSamplingPercentage(samplingFraction)
+        tmpRegistration.SetMetricSamplingPercentage(tmpRegistration.RANDOM)
+
+    if(inMask):
+        tmpRegistration.SetMetricMovingMask(inMask)
+    if(refMask):
+        tmpRregistration.SetMetricFixedMask(refMask)
+
+    return tmpRegistration
 #
 
 def imgCollaspeDimension(inImg):
