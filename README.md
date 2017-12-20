@@ -47,10 +47,10 @@ Go to this link in your browser by copying and pasting it. <br/>
 
 Next, click on `ndreg_demo.ipynb`. Once the notebook opens, you can run all cells by clicking on 'Cell' and then 'Run All'.
 
-The expected run time for this demo is < 5 seconds.
+The expected run time for this demo is ~ 2 minutes.
 
 ### Expected Output
 
 The last 2 cells in the demo notebook should look like the same imnage. This indicates that the registration process was a sucess!
 
-## Congrats, you've succesfully run ndreg!
+### Congrats, you've succesfully run ndreg!
