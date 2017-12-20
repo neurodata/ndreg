@@ -51,6 +51,6 @@ The expected run time for this demo is ~ 2 minutes.
 
 ### Expected Output
 
-The last 2 cells in the demo notebook should look like the same imnage. This indicates that the registration process was a sucess!
+The last 3 cells in the demo notebook display images that should look the same (both the LDDMM registered image and the displacement field warped image) and a mean squared error
 
 ### Congrats, you've succesfully run ndreg!
