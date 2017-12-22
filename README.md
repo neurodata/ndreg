@@ -3,7 +3,7 @@ Package that performs affine and LDDMM registration *easily* <br/>
 
 ## Sytem Requirements
 
-The recommended way to use this package is to install [Docker](https://store.docker.com/search?offering=community&type=edition). Docker is currently available on OS X El Capitan 10.11 and newer macOS releases, the following Ubuntu versions: Zesty 17.04 (LTS), Yakkety 16.10, Xenial 16.04 (LTS), Trusty 14.04 (LTS), and Windows 10.
+The recommended way to use this package is to install [Docker](https://store.docker.com/search?offering=community&type=edition). Docker is currently available on Mac OS X El Capitan 10.11 and newer macOS releases, the following Ubuntu versions: Zesty 17.04 (LTS), Yakkety 16.10, Xenial 16.04 (LTS), Trusty 14.04 (LTS), and Windows 10.
 
 ### Software Dependencies (with version numbers)
 
@@ -21,7 +21,7 @@ Python depedencies: <br/>
 - SimpleITK -- (1.0.1)
 
 ### Versions tested on
-We have tested the Docker image and build on macOS High Sierra (on MacBook Pro with 2.9 GHz Intel Core i7 and 16 GB RAM) and Ubuntu Xenial 16.04.3 LTS.
+We have tested the Docker image and build on macOS High Sierra (on MacBook Pro with 2.9 GHz Intel Core i7 and 16 GB RAM) and Ubuntu Xenial 16.04.3 LTS (with 64 GB RAM).
 
 ## Installation Guide
 
@@ -51,6 +51,6 @@ The expected run time for this demo is ~ 2 minutes.
 
 ### Expected Output
 
-The last 2 cells in the demo notebook should look like the same imnage. This indicates that the registration process was a sucess!
+The last 3 cells in the demo notebook display images that should look the same (both the LDDMM registered image and the displacement field warped image) and a mean squared error
 
 ### Congrats, you've succesfully run ndreg!
