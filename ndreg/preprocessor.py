@@ -214,9 +214,10 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     assert(out_target.GetSpacing() == out_atlas.GetSpacing())
     return out_atlas, out_target
 
-def normalize(img):
-    max_val = ndreg.imgPercentile(img, 0.999)
+def normalize(img, percentile=0.99):
+    max_val = ndreg.imgPercentile(img, percentile)
     return sitk.Clamp(img, upperBound=max_val) / max_val
     
 def whiten(image, radius=[10,10,10], alpha=0.3, beta=0.3):
     return sitk.AdaptiveHistogramEqualization(image, radius, alpha, beta)
+
