@@ -1387,7 +1387,7 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
             inMask = imgApplyField(origInMask,
                                    compositeField, size=refImg.GetSize(), useNearest=True)
         # vikram added this
-        if verbose: imgShow(inImg, vmax=imgPercentile(inImg, 0.99))
+#        if verbose: imgShow(inImg, vmax=imgPercentile(inImg, 0.99))
 
     # Write final results
     if outDirPath != "":
