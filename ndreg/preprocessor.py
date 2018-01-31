@@ -182,7 +182,7 @@ def create_iterative_mask(img):
 
 # utility functions
 
-def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True, default_value=0.0):
+def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True, dv_atlas=0.0, dv_target=0.0):
     """
     make sure img1 is the source and img2 is the target.
     iamges will be resampled to match the coordinate system of img2.
@@ -201,12 +201,13 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     resampler.SetInterpolator(sitk.sitkBSpline)
     resampler.SetSize(vox_sizes)
     resampler.SetOutputSpacing([spacing]*3)
-    resampler.SetDefaultPixelValue(default_value)
+    resampler.SetDefaultPixelValue(dv_target)
 #     resampler.SetOutputOrigin((np.array(max_size_per_dim)/2.0).tolist())
 
-    out_origin = (np.array(max_size_per_dim)/2.0).tolist()
+#    out_origin = (np.array(max_size_per_dim)/2.0).tolist()
     out_target = resampler.Execute(target_r)
 #     out_target.SetOrigin(out_origin)
+    resampler.SetDefaultPixelValue(dv_atlas)
     out_atlas = resampler.Execute(atlas)
 #     out_atlas.SetOrigin(out_origin)
     
