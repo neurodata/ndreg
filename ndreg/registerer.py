@@ -51,9 +51,9 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
     return final_transform
 
-def register_lddmm(affine_img, target_img, alpha_list=0.02, scale_list=[0.5, 1.0], 
-                   epsilon_list=1e-4, min_epsilon_list=1e-10, sigma=None, use_mi=False, iterations=200, inMask=None,
-                   verbose=True, out_dir=''):
+def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25, 0.5, 1.0], 
+                   epsilon_list=1e-4, min_epsilon_list=1e-10, sigma=0.1, use_mi=False, iterations=200, inMask=None,
+                   refMask=None, verbose=True, out_dir=''):
     if sigma == None:
         sigma = (0.1/target_img.GetNumberOfPixels())
 
@@ -65,6 +65,7 @@ def register_lddmm(affine_img, target_img, alpha_list=0.02, scale_list=[0.5, 1.0
                                                         sigma=sigma,
                                                         useMI=use_mi,
                                                         inMask=inMask,
+                                                        refMask=refMask,
                                                         iterations=iterations, 
                                                         verbose=verbose,
                                                         outDirPath=out_dir)
