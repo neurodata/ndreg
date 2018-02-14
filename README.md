@@ -1,5 +1,6 @@
 # ndreg
 [![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)]() <br/>
+[![DockerHub](https://img.shields.io/docker/pulls/neurodata/ndreg.svg)](https://hub.docker.com/r/neurodata/ndreg)
 Package that performs affine and LDDMM registration *easily* <br/>
 
 ## Sytem Requirements
