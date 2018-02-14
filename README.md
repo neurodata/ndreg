@@ -1,5 +1,5 @@
 # ndreg
-[![Travis](https://img.shields.io/travis/rust-lang/rust.svg)]()
+[![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)]() <br/>
 Package that performs affine and LDDMM registration *easily* <br/>
 
 ## Sytem Requirements
