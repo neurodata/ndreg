@@ -25,35 +25,13 @@ RUN apt-get update && apt-get -y install \
   git \
   build-essential \
   cmake \
-  gcc
-#  icu-devtools \
-#  libicu-dev
-#   vim
-
-#RUN git clone https://github.com/SuperElastix/SimpleElastix
-#RUN mkdir build
-#
-#WORKDIR build
-#
-#RUN cmake ../SimpleElastix/SuperBuild
-#RUN make -j16   
-#
-#WORKDIR /build/SimpleITK-build/Wrapping/Python/Packaging
-#RUN python setup.py install 
-#
-#WORKDIR /run
-
-#RUN git clone https://github.com/xianyi/OpenBLAS
-#WORKDIR OpenBLAS/
-#RUN make -j16 FC=gfortran
-#RUN make PREFIX=/opt/openblas install
+  gcc \
+  vim
 
 RUN pip install --upgrade pip
 RUN pip install matplotlib SimpleITK numpy psutil pytest tifffile
 
-# We currently following 'master' to incorperate many recent bug fixes.
-# When stable, use the following instead:
-#RUN pip install intern
+# We currently following 'master' to incorporate many recent bug fixes.
 WORKDIR /work
 RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
 WORKDIR /work/intern
