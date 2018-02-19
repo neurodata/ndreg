@@ -5,5 +5,6 @@ sudo: required
 services:
       - docker
 
-before_install:
+install:
     - docker build -t neurodata/ndreg .
+    - docker run -p 8888:8888 neurodata/ndreg .
