@@ -52,19 +52,6 @@ def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=F
     mask_sitk.CopyInformation(img)
     return mask_sitk
 
-def remove_circle(img, radius=170):
-    origin_shift = [0, 0]
-    center = [img.shape[-1]/2 + origin_shift[0], img.shape[-2]/2 + origin_shift[1]]
-    x, y, z = img.shape
-    mask = np.zeros((y,z))
-    for i in range(y):
-        for j in range(z):
-            mask[i,j] = math.sqrt((i-center[1])**2 + (j-center[0])**2) 
-    mask = (mask < radius).astype('uint64')
-    new_mask = np.repeat(mask[None,:,:], img.shape[0], axis=0)
-    img_masked = np.multiply(img, new_mask)
-    return img_masked
-
 def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, niters=[50, 50, 50, 50],
                       num_control_pts=[5, 5, 5], fwhm=0.150):
     """
