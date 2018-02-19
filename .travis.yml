@@ -7,4 +7,7 @@ services:
 
 install:
     - docker build -t neurodata/ndreg .
-    - docker run -p 8888:8888 neurodata/ndreg .
+    - docker run -p 8888:8888 --name ndreg-vik neurodata/ndreg
+
+script:
+    -  docker ps | grep -q ndreg-vik
