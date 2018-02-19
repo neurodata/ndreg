@@ -14,11 +14,3 @@ Welcome to ndreg's documentation!
    preprocessor
    registerer
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
