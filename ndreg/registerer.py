@@ -6,8 +6,10 @@ import skimage
 import matplotlib
 from matplotlib import pyplot as plt
 
-def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1],
-            sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
+def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
+    """
+    Performs affine registration between an atlas an an image given that they have the same spacing.
+    """
     registration_method = sitk.ImageRegistrationMethod()
 
     # Similarity metric settings.
