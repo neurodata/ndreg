@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
 from intern.remote.boss import BossRemote
-from intern.resource.boss.resource import *
+from intern.resource.boss.resource import ChannelResource, CoordinateFrameResource, ExperimentResource
 import requests
 from requests import HTTPError
 
@@ -73,6 +73,9 @@ def isInteger(n, epsilon=1e-6):
 
 
 def run(command, checkReturnValue=True, verbose=False):
+    """
+    Runs a shell command and returns the output.
+    """
     process = subprocess.Popen(
         command,
         shell=True,
@@ -124,6 +127,9 @@ def txtWriteList(parameterList, path):
 
 
 def dirMake(dirPath):
+    """
+    Convenience function to create a directory at the given path
+    """
     if dirPath != "":
         if not os.path.exists(dirPath):
             os.makedirs(dirPath)
@@ -161,6 +167,9 @@ def imgRead(path):
 
 
 def setup_experiment_boss(remote, collection, experiment):
+    """
+    Get experiment and coordinate frame information from the boss.
+    """
     exp_setup = ExperimentResource(experiment, collection)
     try:
         exp_actual = remote.get_project(exp_setup)
@@ -576,12 +585,6 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
 
     return tmpRegistration.GetMetricValue()
 
-def imgThreshold(img, threshold=0):
-    """
-    Thresholds image at inPath at given threshold and writes result to outPath.
-    """
-    return sitk.BinaryThreshold(img, 0, threshold, 0, 1)
-
 def imgMask(img, mask):
     """
     Convenience function to apply mask to image
@@ -748,7 +751,6 @@ def imgReorient(inImg, inOrient, outOrient):
         z-axis increases from \"s\"uperior to inferior
     Thus using inOrient = "las" and outOrient = "rpi" reorients the input image from left-anterior-superior to right-posterior-inferior orientation.
     """
-
     if (len(inOrient) != dimension) or not isinstance(inOrient, basestring):
         raise Exception(
             "inOrient must be a string of length {0}.".format(dimension))

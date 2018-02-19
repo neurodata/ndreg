@@ -10,6 +10,10 @@ Welcome to ndreg's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   ndreg
+   preprocessor
+   registerer
+
 
 
 Indices and tables
