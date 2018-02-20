@@ -53,13 +53,13 @@ def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=F
     return mask_sitk
 
 def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, niters=[50, 50, 50, 50],
-                      num_control_pts=[5, 5, 5], fwhm=0.150):
+                      num_control_pts=[5, 5, 5], fwhm=0.150, convergence_threshold=0.001):
     """
     Bias corrects an image using the N4 algorithm
     """
 #     if type(img) is not sitk.SimpleITK.Image:
 #         raise("Input image needs to be of type SimpleITK.SimpleITK.Image")
-    
+
     spacing = np.array(img.GetSpacing())/scale
     img_ds = ndreg.imgResample(img, spacing=spacing)
 
@@ -74,20 +74,18 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
             mask = mask_sitk
         mask = ndreg.imgResample(mask, spacing=spacing)
 
-    img_ds_bc = sitk.N4BiasFieldCorrection(sitk.Cast(img_ds, sitk.sitkFloat32), mask, 0.001, 
-                                           niters, splineOrder=spline_order, 
+    img_ds_bc = sitk.N4BiasFieldCorrection(sitk.Cast(img_ds, sitk.sitkFloat32), mask, convergence_threshold,
+                                           niters, splineOrder=spline_order,
                                            numberOfControlPoints=num_control_pts,
                                            biasFieldFullWidthAtHalfMaximum=fwhm)
-    bias_ds = img_ds_bc - sitk.Cast(img_ds, img_ds_bc.GetPixelID())
+    bias_ds = img_ds_bc / sitk.Cast(img_ds, img_ds_bc.GetPixelID())
+    
 
     # Upsample bias
     bias = ndreg.imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
-    # Apply bias to original image and threshold to eliminate negitive values
-    upper = np.iinfo(sitkToNpDataTypes[img.GetPixelID()]).max
-    img_bc = sitk.Threshold(img + sitk.Cast(bias, img.GetPixelID()),
-                lower=0, upper=upper)
-    return img_bc 
+    img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
+    return img_bc, img_ds_bc, bias
 
 # TODO: finish this method
 def create_iterative_mask(img):
@@ -136,6 +134,3 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     assert(out_target.GetSpacing() == out_atlas.GetSpacing())
     return out_atlas, out_target
    
-def whiten(image, radius=[10,10,10], alpha=0.3, beta=0.3):
-    return sitk.AdaptiveHistogramEqualization(image, radius, alpha, beta)
-
