@@ -85,7 +85,7 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     bias = ndreg.imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
     img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
-    return img_bc, img_ds_bc, bias
+    return img_bc
 
 # TODO: finish this method
 def create_iterative_mask(img):
@@ -105,6 +105,15 @@ def create_iterative_mask(img):
     return 
 
 # utility functions
+def downsample(img, res=3):
+    out_spacing = np.array(img.GetSpacing()) * (2.0**res)
+    img_ds = skimage.measure.block_reduce(sitk.GetArrayViewFromImage(img),
+                                          block_size=(2,2,2), func=np.mean)
+    for i in range(res - 1):
+        img_ds = skimage.measure.block_reduce(sitk.GetArrayViewFromImage(img_ds),
+                                                     block_size=(2,2,2), func=np.mean)
+    img_ds_sitk = sitk.GetImageFromArray(img_ds)
+    img_ds_sitk.setSpacing(out_spacing)
 
 def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True, dv_atlas=0.0, dv_target=0.0):
     """
