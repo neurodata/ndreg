@@ -57,11 +57,18 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     """
     Bias corrects an image using the N4 algorithm
     """
-#     if type(img) is not sitk.SimpleITK.Image:
-#         raise("Input image needs to be of type SimpleITK.SimpleITK.Image")
-
-    spacing = np.array(img.GetSpacing())/scale
-    img_ds = ndreg.imgResample(img, spacing=spacing)
+     # do in case image has 0 intensities
+    # add a small constant that depends on
+    # distribution of intensities in the image
+    stats = sitk.StatisticsImageFilter()
+    stats.Execute(img)
+    std = math.sqrt(stats.GetVariance())
+    img_rescaled = sitk.Cast(img, sitk.sitkFloat32) + 0.1*std
+    
+    spacing = np.array(img_rescaled.GetSpacing())/scale
+    img_ds = ndreg.imgResample(img_rescaled, spacing=spacing)
+    img_ds = sitk.Cast(img_ds, sitk.sitkFloat32)
+    
 
     # Calculate bias
     if mask is None:
@@ -73,8 +80,8 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
             mask_sitk.CopyInformation(img)
             mask = mask_sitk
         mask = ndreg.imgResample(mask, spacing=spacing)
-
-    img_ds_bc = sitk.N4BiasFieldCorrection(sitk.Cast(img_ds, sitk.sitkFloat32), mask, convergence_threshold,
+    
+    img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, convergence_threshold,
                                            niters, splineOrder=spline_order,
                                            numberOfControlPoints=num_control_pts,
                                            biasFieldFullWidthAtHalfMaximum=fwhm)
@@ -85,7 +92,7 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     bias = ndreg.imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
     img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
-    return img_bc
+    return img_bc, bias
 
 # TODO: finish this method
 def create_iterative_mask(img):
