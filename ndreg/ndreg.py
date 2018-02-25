@@ -47,14 +47,14 @@ sitkToNpDataTypes = {sitk.sitkUInt8: np.uint8,
 
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-def isIterable(variable):
+def _isIterable(variable):
     """
     Returns True if variable is a list, tuple or any other iterable object
     """
     return hasattr(variable, '__iter__')
 
 
-def isNumber(variable):
+def _isNumber(variable):
     """
     Returns True if varible is is a number
     """
@@ -63,14 +63,6 @@ def isNumber(variable):
     except TypeError:
         return False
     return True
-
-
-def isInteger(n, epsilon=1e-6):
-    """
-    Returns True if n is integer within error epsilon
-    """
-    return (n - int(n)) < epsilon
-
 
 def run(command, checkReturnValue=True, verbose=False):
     """
@@ -371,7 +363,6 @@ def download_ara(rmt, resolution, type='average'):
         return
     REFERENCE_COLLECTION = 'ara_2016'
     REFERENCE_EXPERIMENT = 'sagittal_{}um'.format(resolution)
-    REFERENCE_COORDINATE_FRAME = 'ara_2016_{}um'.format(resolution) 
     REFERENCE_CHANNEL = '{}_{}um'.format(type, resolution)
 
     refImg = download_image(rmt, REFERENCE_COLLECTION, REFERENCE_EXPERIMENT, REFERENCE_CHANNEL, ara_res=resolution)
@@ -379,7 +370,7 @@ def download_ara(rmt, resolution, type='average'):
     return refImg
 
 def download_image(rmt, collection, experiment, channel, res=0, isotropic=True, ara_res=None):
-    (exp_resource, coord_resource, channel_resource) = setup_channel_boss(rmt, collection, experiment, channel)
+    (_, coord_resource, channel_resource) = setup_channel_boss(rmt, collection, experiment, channel)
     img = imgDownload_boss(rmt, channel_resource, coord_resource, resolution=res, isotropic=isotropic)
     return img
 
@@ -479,7 +470,7 @@ def imgResample(img, spacing, size=[], useNearest=False,
 #    For example if the input image has a voxel spacing of 0.5 and the padding=2.0 then the image will be padded by 4 voxels.
 #    If the padding < 0 then the filter crops the image
 #    """
-#    if isNumber(padding):
+#    if _isNumber(padding):
 #        padding = [padding] * img.GetDimension()
 #    elif len(padding) != img.GetDimension():
 #        raise Exception(
@@ -516,7 +507,7 @@ def createTmpRegistration(inMask=None, refMask=None,
     if(inMask):
         tmpRegistration.SetMetricMovingMask(inMask)
     if(refMask):
-        tmpRregistration.SetMetricFixedMask(refMask)
+        tmpRegistration.SetMetricFixedMask(refMask)
 
     return tmpRegistration
 
@@ -666,36 +657,6 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[]):
                            interpolator, zeroOrigin, spacing)
 
     return outImg
-
-def affineApplyAffine(inAffine, affine):
-    """ A_{outAffine} = A_{inAffine} \circ A_{affine} """
-    if (not(isIterable(inAffine)) or not(isIterable(affine))
-            ):
-        raise Exception("inAffine and affine must be lists.")
-    numParameters = len(inAffine)
-    n = 0.5 * (-1 + math.sqrt(1 + 4 * numParameters))  # dimension
-    if not isInteger(n):
-        raise Exception(
-            "Must have len(inAffine) = n*n + n where n is some interger.")
-    if numParameters != len(affine):
-        raise Exception(
-            "inAffine and affine should be lists of same length.")
-
-    n = int(n)
-    A0 = np.array(affine[:n * n]).reshape(n, n)
-    b0 = np.array(affine[n * n:]).reshape(n, 1)
-    A1 = np.array(inAffine[:n * n]).reshape(n, n)
-    b1 = np.array(inAffine[n * n:]).reshape(n, 1)
-
-    # x0 = A0*x1 + b0
-    # x1 = A1*x2 + b1
-    # x0 = A0*(A1*x2 + b1) + b0 = (A0*A1)*x2 + (A0*b1 + b0)
-    A = np.dot(A0, A1)
-    b = np.dot(A0, b1) + b0
-
-    outAffine = A.flatten().tolist() + b.flatten().tolist()
-    return outAffine
-
 
 def fieldApplyField(inField, field, size=[], spacing=[]):
     """ outField = inField \circ field """
@@ -903,21 +864,21 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
     else:
         outDirPath = dirMake(outDirPath)
 
-    if isNumber(alphaList):
+    if _isNumber(alphaList):
         alphaList = [float(alphaList)]
-    if isNumber(betaList):
+    if _isNumber(betaList):
         betaList = [float(betaList)]
-    if isNumber(scaleList):
+    if _isNumber(scaleList):
         scaleList = [float(scaleList)]
 
     numSteps = max(len(alphaList), len(betaList), len(scaleList))
 
-    if isNumber(epsilonList):
+    if _isNumber(epsilonList):
         epsilonList = [float(epsilonList)] * numSteps
     elif epsilonList is None:
         epsilonList = [None] * numSteps
 
-    if isNumber(minEpsilonList):
+    if _isNumber(minEpsilonList):
         minEpsilonList = [float(minEpsilonList)] * numSteps
     elif minEpsilonList is None:
         minEpsilonList = [None] * numSteps
@@ -1112,11 +1073,11 @@ def imgGrid(size, spacing, step=[10, 10, 10], field=None):
     An optinal displacement field can be applied to the grid as well.
     """
 
-    if not(isIterable(size)):
+    if not(_isIterable(size)):
         raise Exception("size must be a list.")
-    if not(isIterable(spacing)):
+    if not(_isIterable(spacing)):
         raise Exception("spacing must be a list.")
-    if not(isIterable(step)):
+    if not(_isIterable(step)):
         raise Exception("step must be a list.")
     if len(size) != len(spacing):
         raise Exception("len(size) != len(spacing)")
@@ -1277,14 +1238,14 @@ def imgMetamorphosisSlicePlotter(inImg, refImg, field):
 
 def imgMetamorphosisLogPlotter(
         logPathList, labelList=None, useLog=False, useTime=False):
-    if not(isIterable(logPathList)):
+    if not(_isIterable(logPathList)):
         raise Exception("logPathList should be a list.")
 
     if labelList is None:
         labelList = ["Step {0}".format(i)
                      for i in range(1, len(logPathList) + 1)]
     else:
-        if not(isIterable(labelList)):
+        if not(_isIterable(labelList)):
             raise Exception("labelList should be a list.")
         if len(labelList) != len(logPathList):
             raise Exception(

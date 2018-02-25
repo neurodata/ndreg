@@ -77,6 +77,53 @@ def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 
                                             spacing=target_img.GetSpacing())
     return source_lddmm, field, invField
 
+def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
+    """
+    Performs affine registration between an atlas an an image given that they have the same spacing.
+    """
+    registration_method = sitk.ImageRegistrationMethod()
+
+    # Similarity metric settings.
+#     registration_method.SetMetricAsMeanSquares()
+    if use_mi: registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=128)
+    else: registration_method.SetMetricAsMeanSquares()
+    # registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
+    # registration_method.SetMetricSamplingPercentage(0.01)
+
+    registration_method.SetInterpolator(sitk.sitkBSpline)
+
+    # Optimizer settings.
+    registration_method.SetOptimizerAsRegularStepGradientDescent(learningRate=learning_rate,
+                                                                 minStep=min_step,
+    #                                                              estimateLearningRate=registration_method.EachIteration,
+                                                                 gradientMagnitudeTolerance=grad_tol,
+                                                                 numberOfIterations=iters)
+    registration_method.SetOptimizerScalesFromPhysicalShift()
+
+    # Setup for the multi-resolution framework.            
+    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=shrink_factors)
+    registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=sigmas)
+    registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+
+    # initial transform
+    initial_transform = sitk.VersorRigid3DTransform()
+    length = np.array(atlas.GetSize())*np.array(atlas.GetSpacing())
+    initial_transform.SetCenter(length/2.0)
+
+    # Don't optimize in-place, we would possibly like to run this cell multiple times.
+    registration_method.SetInitialTransform(initial_transform)
+
+    # Connect all of the observers so that we can perform plotting during registration.
+    if verbose:
+        registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
+        registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plot_values(registration_method))
+
+    final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
+                                                  sitk.Cast(atlas, sitk.sitkFloat32))
+    return final_transform
+
 def resample(image, transform, ref_img, default_value=0.0):
     # Output image Origin, Spacing, Size, Direction are taken from the reference
     # image in this call to Resample
