@@ -27,24 +27,6 @@ identityDirection = identityAffine[0:9]
 zeroOrigin = [0] * dimension
 zeroIndex = [0] * dimension
 
-ndToSitkDataTypes = {'uint8': sitk.sitkUInt8,
-                     'uint16': sitk.sitkUInt16,
-                     'uint32': sitk.sitkUInt32,
-                     'float32': sitk.sitkFloat32,
-                     'uint64': sitk.sitkUInt64}
-
-
-sitkToNpDataTypes = {sitk.sitkUInt8: np.uint8,
-                     sitk.sitkUInt16: np.uint16,
-                     sitk.sitkUInt32: np.uint32,
-                     sitk.sitkInt8: np.int8,
-                     sitk.sitkInt16: np.int16,
-                     sitk.sitkInt32: np.int32,
-                     sitk.sitkFloat32: np.float32,
-                     sitk.sitkFloat64: np.float64,
-                     }
-
-
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 def _isIterable(variable):
@@ -156,8 +138,6 @@ def imgRead(path):
     return inImg
 
 # Boss Stuff:
-
-
 def setup_experiment_boss(remote, collection, experiment):
     """
     Get experiment and coordinate frame information from the boss.
@@ -290,50 +270,6 @@ def imgDownload_boss(
     img = imgCollaspeDimension(img)
 
     return img
-
-
-def get_offset_boss(coord_frame, res=0, isotropic=False):
-    return [
-        int(coord_frame.x_start / (2.**res)),
-        int(coord_frame.y_start / (2.**res)),
-        int(coord_frame.z_start / (2.**res)) if isotropic else coord_frame.z_start]
-
-def imgUpload_boss(
-        remote,
-        img,
-        channel_resource,
-        coord_frame,
-        resolution=0,
-        start=[
-            0,
-            0,
-            0],
-        propagate=False,
-        isotropic=False):
-    if(img.GetDimension() == 2):
-        img = sitk.JoinSeriesImageFilter().Execute(img)
-
-    data = sitk.GetArrayFromImage(img)  # data is C-ordered (z y x)
-
-    offset = get_offset_boss(coord_frame, resolution, isotropic)
-
-    start = [x + y for x, y in zip(start, offset)]
-
-    st_x = start[0]
-    st_y = start[1]
-    st_z = start[2]
-    sp_x = st_x + np.shape(data)[2]
-    sp_y = st_y + np.shape(data)[1]
-    sp_z = st_z + np.shape(data)[0]
-
-    try:
-        remote.create_cutout(channel_resource, resolution,
-                             [st_x, sp_x], [st_y, sp_y], [st_z, sp_z], data)
-        print('Upload success')
-    except Exception as e:
-        # perhaps reconnect, etc.
-        print('Exception occurred: {}'.format(e))
-        raise(e)
 
 def create_channel_resource(rmt, chan_name, coll_name, exp_name, type='image', 
                             base_resolution=0, sources=[], datatype='uint16', new_channel=True):
