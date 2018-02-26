@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 
 import shutil
 import util
+import preprocessor
 
 dimension = 3
 vectorComponentType = sitk.sitkFloat32
