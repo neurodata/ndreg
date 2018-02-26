@@ -272,3 +272,16 @@ def imgResample(img, spacing, size=[], useNearest=False,
 #    origin = [0] * img.GetDimension()
 #    return sitk.Resample(img, size, translationTransform,
 #                         interpolator, origin, spacing)
+
+def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientation='pir'):
+    mm_to_um = 1000.0
+    img = imgResample(img, [spacing/mm_to_um]*3)
+    mask_dilation_radius = 10 # voxels
+    mask = sitk.BinaryDilate(create_mask(img, use_triangle=True), mask_dilation_radius)
+    if args.modality.lower() == 'colm': mask = None
+    img_bc = correct_bias_field(img, scale=0.25, spline_order=4, mask=mask,
+                                                num_control_pts=[5,5,5],
+                                                niters=[500, 500, 500, 500])
+    img_bc = ndreg.imgReorient(img_bc, image_orientation, atlas_orientation)
+    img_bc_n = sitk.Normalize(img_bc)
+    return img_bc_n
