@@ -4,6 +4,9 @@ import sys
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 
+from ipywidgets import interact, fixed
+from IPython.display import clear_output
+
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 dimension = 3
@@ -153,9 +156,6 @@ def imgRead(path):
     inImg.SetOrigin([0] * inDimension)
 
     return inImg
-
-from ipywidgets import interact, fixed
-from IPython.display import clear_output
 
 # Callback invoked by the interact IPython method for scrolling through the image stacks of
 # the two images (moving and fixed).

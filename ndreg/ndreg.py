@@ -9,9 +9,8 @@ import util, registerer, preprocessor
 
 def register_brain(atlas, img, modality, image_orientation, outdir=None):
     if outdir is None: outdir = './'
-    img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing()[0], modality, image_orientation)
-    final_transform = registerer.register_affine(sitk.Normalize(atlas), 
-                                                img_p,
+    final_transform = register_affine(sitk.Normalize(atlas), 
+                                                img,
                                                 learning_rate=1e-1,
                                                 grad_tol=4e-6,
                                                 use_mi=False,
@@ -23,8 +22,8 @@ def register_brain(atlas, img, modality, image_orientation, outdir=None):
     # make the dir if it doesn't exist
     util.dir_make(outdir)
     sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
-    atlas_affine = registerer.resample(atlas, final_transform, img_p, default_value=imgPercentile(atlas,0.01))
-    img_affine = registerer.resample(img_p, final_transform.GetInverse(), atlas, default_value=imgPercentile(img_p,0.01))
+    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=imgPercentile(atlas,0.01))
+    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=imgPercentile(img,0.01))
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
