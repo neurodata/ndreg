@@ -4,9 +4,6 @@ import sys
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 
-from ipywidgets import interact, fixed
-from IPython.display import clear_output
-
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 dimension = 3
@@ -179,6 +176,8 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
 
 # Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
 # of an image stack of two images that occupy the same physical space. 
+from ipywidgets import interact, fixed
+from IPython.display import clear_output
 def display_slices_with_alpha(fixed, moving, alpha, vmax):
     img = (1.0 - alpha)*fixed + alpha*moving
     plt.imshow(sitk.GetArrayViewFromImage(img),cmap=plt.cm.Greys_r, vmax=vmax)

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 import util, registerer, preprocessor
 
-def register_brain(atlas, img, modality, image_orientation, outdir=None):
+def register_brain(atlas, img, modality, outdir=None):
     if outdir is None: outdir = './'
     final_transform = register_affine(sitk.Normalize(atlas), 
                                                 img,
@@ -27,13 +27,13 @@ def register_brain(atlas, img, modality, image_orientation, outdir=None):
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
-    img_bc_w = sitk.AdaptiveHistogramEqualization(img_bc, [10,10,10], alpha=0.25, beta=0.25)
+    img_w = sitk.AdaptiveHistogramEqualization(img, [10,10,10], alpha=0.25, beta=0.25)
 
     # then run lddmm
     e = 5e-3
     s = 0.1
-    atlas_lddmm, field, inv_field = registerer.register_lddmm(sitk.Normalize(atlas_affine_w), 
-                                                                                                    sitk.Normalize(img_bc_w),
+    atlas_lddmm, field, inv_field = register_lddmm(sitk.Normalize(atlas_affine_w), 
+                                                                                                    sitk.Normalize(img_w),
                                                                                                     alpha_list=[0.05], 
                                                                                                     scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
                                                                                                     epsilon_list=e, sigma=s,
