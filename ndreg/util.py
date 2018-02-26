@@ -1,7 +1,7 @@
 import subprocess
 import os
 import sys
-import matplotlib,pyplot as plt
+import matplotlib.pyplot as plt
 import SimpleITK as sitk
 
 # in order to find the metamorphosis binary
@@ -154,7 +154,6 @@ def imgRead(path):
 
     return inImg
 
-# Utility functions for plotting
 from ipywidgets import interact, fixed
 from IPython.display import clear_output
 
