@@ -92,7 +92,7 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     bias = imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
 
     img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
-    return img_bc, bias
+    return img_bc
 
 # TODO: finish this method
 #def create_iterative_mask(img):
