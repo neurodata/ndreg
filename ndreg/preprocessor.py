@@ -246,9 +246,14 @@ def imgResample(img, spacing, size=[], useNearest=False,
         outsideValue)
 
 def normalize(img, percentile=0.99):
-    max_val = ndreg.imgPercentile(img, percentile)
-    return sitk.Clamp(img, upperBound=max_val) / max_val
+    #Accept ndarray images or sitk images
+    if type(img) is np.ndarray:
+        sitk_img = sitk.GetImageFromArray(img)
+    else:
+        sitk_img = img
 
+    max_val = ndreg.imgPercentile(sitk_img, percentile)
+    return sitk.Clamp(sitk_img, upperBound=max_val) / max_val
 
 #def imgPad(img, padding=0, useNearest=False):
 #    """
