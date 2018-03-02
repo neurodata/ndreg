@@ -64,11 +64,11 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     stats.Execute(img)
     std = math.sqrt(stats.GetVariance())
     img_rescaled = sitk.Cast(img, sitk.sitkFloat32) + 0.1*std
-    
+
     spacing = np.array(img_rescaled.GetSpacing())/scale
     img_ds = imgResample(img_rescaled, spacing=spacing)
     img_ds = sitk.Cast(img_ds, sitk.sitkFloat32)
-    
+
 
     # Calculate bias
     if mask is None:
@@ -80,13 +80,13 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
             mask_sitk.CopyInformation(img)
             mask = mask_sitk
         mask = imgResample(mask, spacing=spacing)
-    
+
     img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, convergence_threshold,
                                            niters, splineOrder=spline_order,
                                            numberOfControlPoints=num_control_pts,
                                            biasFieldFullWidthAtHalfMaximum=fwhm)
     bias_ds = img_ds_bc / sitk.Cast(img_ds, img_ds_bc.GetPixelID())
-    
+
 
     # Upsample bias
     bias = imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
@@ -99,17 +99,17 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
 #    for i in range(7):
 #        out_mask = create_mask(img, use_triangle=True)
 #        imgShow(sitk.GetImageFromArray(out_mask))
-#        
-#        img_bc_tmp = preprocessor.correct_bias_field(img, mask=out_mask, 
+#
+#        img_bc_tmp = preprocessor.correct_bias_field(img, mask=out_mask,
 #                                                     scale=0.25, spline_order=3, niters=[50, 50, 50, 50])
 #        img_bc_np = sitk.GetArrayFromImage(img_bc_tmp)
 #        plt.imshow(img_bc_np[80,:,:], vmax=10000)
 #        plt.colorbar()
 #        plt.show()
-#    
+#
 #    mask_sitk = sitk.GetImageFromArray(out_mask)
 #    mask_sitk.CopyInformation(img)
-#    return 
+#    return
 #
 # utility functions
 def downsample(img, res=3):
@@ -143,12 +143,12 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     out_target = resampler.Execute(target_r)
     resampler.SetDefaultPixelValue(dv_atlas)
     out_atlas = resampler.Execute(atlas)
-    
+
     assert(out_target.GetOrigin() == out_atlas.GetOrigin())
     assert(out_target.GetSize() == out_atlas.GetSize())
     assert(out_target.GetSpacing() == out_atlas.GetSpacing())
     return out_atlas, out_target
-   
+
 def imgReorient(inImg, inOrient, outOrient):
     """
     Reorients image from input orientation inOrient to output orientation outOrient.
@@ -244,6 +244,11 @@ def imgResample(img, spacing, size=[], useNearest=False,
         spacing,
         identityDirection,
         outsideValue)
+
+def normalize(img, percentile=0.99):
+    max_val = ndreg.imgPercentile(img, percentile)
+    return sitk.Clamp(img, upperBound=max_val) / max_val
+
 
 #def imgPad(img, padding=0, useNearest=False):
 #    """
