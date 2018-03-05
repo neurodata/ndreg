@@ -13,7 +13,6 @@ def is_iterable(variable):
     """
     return hasattr(variable, '__iter__')
 
-
 def is_number(variable):
     """
     Returns True if varible is is a number
@@ -58,7 +57,6 @@ def txt_write(text, path, mode="w"):
     textFile.write(text)
     textFile.close()
 
-
 def txt_read(path):
     """
     Conveinence function to read text from file at specified path
@@ -68,14 +66,11 @@ def txt_read(path):
     textFile.close()
     return text
 
-
 def txt_read_list(path):
     return map(float, txt_read(path).split())
 
-
 def txt_write_list(parameterList, path):
     txt_write(" ".join(map(str, parameterList)), path)
-
 
 def dir_make(dirPath):
     """
@@ -93,7 +88,6 @@ def imgCopy(img):
     Returns a copy of the input image
     """
     return sitk.Image(img)
-
 
 def imgWrite(img, path):
     """
@@ -177,6 +171,7 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
 # of an image stack of two images that occupy the same physical space. 
 from ipywidgets import interact, fixed
 from IPython.display import clear_output
+
 def display_slices_with_alpha(fixed, moving, alpha, vmax):
     img = (1.0 - alpha)*fixed + alpha*moving
     plt.imshow(sitk.GetArrayViewFromImage(img),cmap=plt.cm.Greys_r, vmax=vmax)
