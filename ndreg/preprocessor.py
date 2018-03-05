@@ -1,34 +1,63 @@
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import skimage
-from skimage import filters, morphology
-import sklearn
-from sklearn.mixture.gaussian_mixture import GaussianMixture
-import scipy.stats as st
+from skimage import  morphology
+import scipy.ndimage.filters as filters
 import math
 import SimpleITK as sitk
 import util
 
-dimension = 3
+def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientation='pir'):
+    """Perform all preprocessing steps associated with a given imaging modality.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Input brain image to preprocess.
+    spacing : {list}
+        Voxel spacing in the x, y, and z direction, respectively, in mm.
+    modality : {str}
+        Can be either 'lavision' or 'colm' depending on the microscope used to collect the images.
+    image_orientation : {str}
+        A 3-letter string describing the orientation of the brain along the x, y, and z axes. See (http://www.grahamwideman.com/gw/brain/orientation/orientterms.htm) for more information
+    atlas_orientation : {str}, optional
+        Orientation of the atlas you are using. (the default is 'pir', which is the orientation for the Allen Reference Atlas.)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Preprocessed mouse brain volume.
+    """
 
-def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=False):
+    img = imgResample(img, spacing)
+    mask_dilation_radius = 10 # voxels
+    mask = sitk.BinaryDilate(create_mask(img, use_triangle=True), mask_dilation_radius)
+    if modality.lower() == 'colm': mask = None
+    img_bc = correct_bias_field(img, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
+    img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
+    img_bc_n = sitk.Normalize(img_bc)
+    return img_bc_n
+
+def create_mask(img, use_triangle=False):
+    """Creates a mask of the image to separate brain from background using triangle or otsu thresholding. Otsu thresholding is the default.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Image to compute the mask on.
+    use_triangle : {bool}, optional
+        Set to True if you want to use triangle thresholding. (the default is False, which results in Otsu thresholding)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Binary mask with 1s as the foreground and 0s as the background.
+    """ 
+
     test_mask = None
     if use_triangle:
         test_mask = sitk.GetArrayFromImage(sitk.TriangleThreshold(img, 0, 1))
-    elif use_otsu:
-        test_mask = sitk.GetArrayFromImage(sitk.OtsuThreshold(img, 0, 1))
     else:
-        if type(img) is sitk.SimpleITK.Image:
-            img = sitk.GetArrayFromImage(img)
-        gmix = GaussianMixture(n_components=3, covariance_type='full', init_params='kmeans', verbose=0)
-        gmix.fit(img.ravel().reshape(-1, 1))
-        covariances = gmix.covariances_
-        mean_background = gmix.means_.min()
-        covariance_background = covariances[np.where( gmix.means_ == mean_background ) ][0][0]
-        z_score = st.norm.ppf(background_probability)
-        threshold = z_score * np.sqrt(covariance_background) + mean_background
-        test_mask = (img > threshold)
+        test_mask = sitk.GetArrayFromImage(sitk.OtsuThreshold(img, 0, 1))
     eroded_im = morphology.opening(test_mask, selem=morphology.ball(2))
     connected_comp = skimage.measure.label(eroded_im)
     out = skimage.measure.regionprops(connected_comp)
@@ -44,19 +73,26 @@ def create_mask(img, background_probability=0.75, use_triangle=False, use_otsu=F
     mask_sitk.CopyInformation(img)
     return mask_sitk
 
-def imgHM(inImg, refImg, numMatchPoints=64, numBins=256):
+def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
+    """Correct bias field in image using the N4ITK algorithm (http://bit.ly/2oFwAun)
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Input image with bias field.
+    mask : {SimpleITK.SimpleITK.Image}, optional
+        If used, the bias field will only be corrected within the mask. (the default is None, which results in the whole image being corrected.)
+    scale : {float}, optional
+        Scale at which to compute the bias correction. (the default is 0.25, which results in bias correction computed on an image downsampled to 1/4 of it's original size)
+    niters : {list}, optional
+        Number of iterations per resolution. Each additional entry in the list adds an additional resolution at which the bias is estimated. (the default is [50, 50, 50, 50] which results in 50 iterations per resolution at 4 resolutions)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Bias-corrected image that has the same size and spacing as the input image.
     """
-    Histogram matches input image to reference image and writes result to output image
-    """
-    inImg = sitk.Cast(inImg, refImg.GetPixelID())
-    return sitk.HistogramMatchingImageFilter().Execute(
-        inImg, refImg, numBins, numMatchPoints, False)
 
-def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, niters=[50, 50, 50, 50],
-                      num_control_pts=[5, 5, 5], fwhm=0.150, convergence_threshold=0.001):
-    """
-    Bias corrects an image using the N4 algorithm
-    """
      # do in case image has 0 intensities
     # add a small constant that depends on
     # distribution of intensities in the image
@@ -81,10 +117,7 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
             mask = mask_sitk
         mask = imgResample(mask, spacing=spacing)
     
-    img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, convergence_threshold,
-                                           niters, splineOrder=spline_order,
-                                           numberOfControlPoints=num_control_pts,
-                                           biasFieldFullWidthAtHalfMaximum=fwhm)
+    img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, niters)
     bias_ds = img_ds_bc / sitk.Cast(img_ds, img_ds_bc.GetPixelID())
     
 
@@ -94,33 +127,160 @@ def correct_bias_field(img, mask=None, scale=0.2, numBins=128, spline_order=4, n
     img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
     return img_bc
 
-# TODO: finish this method
-#def create_iterative_mask(img):
-#    for i in range(7):
-#        out_mask = create_mask(img, use_triangle=True)
-#        imgShow(sitk.GetImageFromArray(out_mask))
-#        
-#        img_bc_tmp = preprocessor.correct_bias_field(img, mask=out_mask, 
-#                                                     scale=0.25, spline_order=3, niters=[50, 50, 50, 50])
-#        img_bc_np = sitk.GetArrayFromImage(img_bc_tmp)
-#        plt.imshow(img_bc_np[80,:,:], vmax=10000)
-#        plt.colorbar()
-#        plt.show()
-#    
-#    mask_sitk = sitk.GetImageFromArray(out_mask)
-#    mask_sitk.CopyInformation(img)
-#    return 
-#
-# utility functions
-def downsample(img, res=3):
-    out_spacing = np.array(img.GetSpacing()) * (2.0**res)
-    img_ds = skimage.measure.block_reduce(sitk.GetArrayViewFromImage(img),
-                                          block_size=(2,2,2), func=np.mean)
-    for _ in range(res - 1):
-        img_ds = skimage.measure.block_reduce(sitk.GetArrayViewFromImage(img_ds),
-                                                     block_size=(2,2,2), func=np.mean)
-    img_ds_sitk = sitk.GetImageFromArray(img_ds)
-    img_ds_sitk.setSpacing(out_spacing)
+def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
+    """Remove the gridding artifact from COLM images.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Input image.
+    z_axis : {int}, optional
+        An int indicating which axis is the z-axis. Can be 0, 1, or 2 (the default is 1, which  indicates the 2nd dimension is the z axis)
+    sigma : {int}, optional
+        The variance of the gaussian used to blur the image. Larger sigma means more grid correction but stronger edge artifacts. (the default is 10, which empirically works well our data at 50 um)
+    mask : {SimpleITK.SimpleITK.Image}, optional
+        An image with 1s representing the foreground (brain) and 0s representing the background. (the default is None, which will use otsu thresholding to create the brain mask.)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Input image with grid artifact removed.
+    """
+
+    if mask == None: mask = sitk.GetArrayFromImage(sitk.OtsuThreshold(img))
+    img_np = sitk.GetArrayFromImage(img)
+    # create masked array
+    out = np.ma.array(img_np, mask=mask)
+    # compute masked average
+    mean_z = np.ma.average(out, axis=z_axis)
+    stdev = math.sqrt(np.var(mean_z))
+    small_factor = 0.1
+    bias_z_slice = filters.gaussian_filter(mean_z, sigma)/(mean_z)
+    bias_z_img = np.expand_dims(bias_z_slice, z_axis)
+    test = np.repeat(bias_z_img, img.GetSize()[z_axis], axis=z_axis)
+    img_c = img_np * (test * np.abs(mask - 1))
+    img_c[ np.isnan(img_c) ] = 0.0
+    img_c_sitk = sitk.GetImageFromArray(img_c)
+    img_c_sitk.SetSpacing(img.GetSpacing())
+    return img_c_sitk
+
+def imgReorient(img, in_orient, out_orient):
+    """Reorients input image to match out_orient.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Input 3D image.
+    in_orient : {str}
+        3-letter string indicating orientation of brain.
+    out_orient : {str}
+        3-letter string indicating desired orientation of input.
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Reoriented input image.
+    """
+
+    dimension = img.GetDimension()
+    if (len(in_orient) != dimension):
+        raise Exception(
+            "in_orient must be a string of length {0}.".format(dimension))
+    if (len(out_orient) != dimension):
+        raise Exception(
+            "out_orient must be a string of length {0}.".format(dimension))
+    in_orient = str(in_orient).lower()
+    out_orient = str(out_orient).lower()
+
+    inDirection = ""
+    outDirection = ""
+    orientToDirection = {"r": "r", "l": "r",
+                         "s": "s", "i": "s", "a": "a", "p": "a"}
+    for i in range(dimension):
+        try:
+            inDirection += orientToDirection[in_orient[i]]
+        except BaseException:
+            raise Exception("in_orient \'{0}\' is invalid.".format(in_orient))
+
+        try:
+            outDirection += orientToDirection[out_orient[i]]
+        except BaseException:
+            raise Exception("out_orient \'{0}\' is invalid.".format(out_orient))
+
+    if len(set(inDirection)) != dimension:
+        raise Exception(
+            "in_orient \'{0}\' is invalid.".format(in_orient))
+    if len(set(outDirection)) != dimension:
+        raise Exception(
+            "out_orient \'{0}\' is invalid.".format(out_orient))
+
+    order = []
+    flip = []
+    for i in range(dimension):
+        j = inDirection.find(outDirection[i])
+        order += [j]
+        flip += [in_orient[j] != out_orient[i]]
+
+    out_img = sitk.PermuteAxesImageFilter().Execute(img, order)
+    out_img = sitk.FlipImageFilter().Execute(out_img, flip, False)
+    return out_img
+
+def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outsideValue=0):
+    """Resample image to certain spacing and size.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Input 3D image.
+    spacing : {list}
+        List of length 3 indicating the voxel spacing as [x, y, z]
+    size : {list}, optional
+        List of length 3 indicating the number of voxels per dim [x, y, z] (the default is [], which will use compute the appropriate size based on the spacing.)
+    useNearest : {bool}, optional
+        If True use nearest neighbor interpolation. (the default is False, which will use linear interpolation.)
+    origin : {list}, optional
+        The location in physical space representing the [0,0,0] voxel in the input image. (the default is [0,0,0])
+    outsideValue : {int}, optional
+        value used to pad are outside image (the default is 0)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Resampled input image.
+    """
+
+            
+    if len(spacing) != img.GetDimension():
+        raise Exception(
+            "len(spacing) != " + str(img.GetDimension()))
+
+    # Set Size
+    if size == []:
+        inSpacing = img.GetSpacing()
+        inSize = img.GetSize()
+        size = [int(math.ceil(inSize[i] * (inSpacing[i] / spacing[i])))
+                for i in range(img.GetDimension())]
+    else:
+        if len(size) != img.GetDimension():
+            raise Exception(
+                "len(size) != " + str(img.GetDimension()))
+
+    # Resample input image
+    interpolator = [sitk.sitkLinear, sitk.sitkNearestNeighbor][useNearest]
+    identityTransform = sitk.Transform()
+    identityDirection = list(
+        sitk.AffineTransform(
+            img.GetDimension()).GetMatrix())
+
+    return sitk.Resample(
+        img,
+        size,
+        identityTransform,
+        interpolator,
+        origin,
+        spacing,
+        identityDirection,
+        outsideValue)
 
 def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True, dv_atlas=0.0, dv_target=0.0):
     """
@@ -148,139 +308,27 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     assert(out_target.GetSize() == out_atlas.GetSize())
     assert(out_target.GetSpacing() == out_atlas.GetSpacing())
     return out_atlas, out_target
-   
-def imgReorient(inImg, inOrient, outOrient):
+
+def imgHM(img, ref_img, numMatchPoints=64, numBins=256):
+    """Performs histogram matching on two images.
+    
+    Parameters:
+    ----------
+    img : {SimpleITK.SimpleITK.Image}
+        Image on which histogram matching is performed.
+    ref_img : {SimpleITK.SimpleITK.Image}
+        reference image for histogram matching.
+    numMatchPoints : {int}, optional
+        number of quantile values to be matched. (the default is 64)
+    numBins : {int}, optional
+        Number of bins used in  computation of the histogram(the default is 256)
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        Input image histgram-matched to the reference image.
     """
-    Reorients image from input orientation inOrient to output orientation outOrient.
-    inOrient and outOrient must be orientation strings specifying the orientation of the image.
-    For example an orientation string of "las" means that the ...
-        x-axis increases from \"l\"eft to right
-        y-axis increases from \"a\"nterior to posterior
-        z-axis increases from \"s\"uperior to inferior
-    Thus using inOrient = "las" and outOrient = "rpi" reorients the input image from left-anterior-superior to right-posterior-inferior orientation.
-    """
-    if (len(inOrient) != dimension) or not isinstance(inOrient, basestring):
-        raise Exception(
-            "inOrient must be a string of length {0}.".format(dimension))
-    if (len(outOrient) != dimension) or not isinstance(outOrient, basestring):
-        raise Exception(
-            "outOrient must be a string of length {0}.".format(dimension))
-    inOrient = str(inOrient).lower()
-    outOrient = str(outOrient).lower()
 
-    inDirection = ""
-    outDirection = ""
-    orientToDirection = {"r": "r", "l": "r",
-                         "s": "s", "i": "s", "a": "a", "p": "a"}
-    for i in range(dimension):
-        try:
-            inDirection += orientToDirection[inOrient[i]]
-        except BaseException:
-            raise Exception("inOrient \'{0}\' is invalid.".format(inOrient))
-
-        try:
-            outDirection += orientToDirection[outOrient[i]]
-        except BaseException:
-            raise Exception("outOrient \'{0}\' is invalid.".format(outOrient))
-
-    if len(set(inDirection)) != dimension:
-        raise Exception(
-            "inOrient \'{0}\' is invalid.".format(inOrient))
-    if len(set(outDirection)) != dimension:
-        raise Exception(
-            "outOrient \'{0}\' is invalid.".format(outOrient))
-
-    order = []
-    flip = []
-    for i in range(dimension):
-        j = inDirection.find(outDirection[i])
-        order += [j]
-        flip += [inOrient[j] != outOrient[i]]
-
-    outImg = sitk.PermuteAxesImageFilter().Execute(inImg, order)
-    outImg = sitk.FlipImageFilter().Execute(outImg, flip, False)
-    return outImg
-
-def imgResample(img, spacing, size=[], useNearest=False,
-                origin=[], outsideValue=0):
-    """
-    Resamples image to given spacing and size.
-    """
-    if len(spacing) != img.GetDimension():
-        raise Exception(
-            "len(spacing) != " + str(img.GetDimension()))
-
-    # Set Size
-    if size == []:
-        inSpacing = img.GetSpacing()
-        inSize = img.GetSize()
-        size = [int(math.ceil(inSize[i] * (inSpacing[i] / spacing[i])))
-                for i in range(img.GetDimension())]
-    else:
-        if len(size) != img.GetDimension():
-            raise Exception(
-                "len(size) != " + str(img.GetDimension()))
-
-    if origin == []:
-        origin = [0] * img.GetDimension()
-    else:
-        if len(origin) != img.GetDimension():
-            raise Exception(
-                "len(origin) != " + str(img.GetDimension()))
-
-    # Resample input image
-    interpolator = [sitk.sitkBSpline, sitk.sitkNearestNeighbor][useNearest]
-    identityTransform = sitk.Transform()
-    identityDirection = list(
-        sitk.AffineTransform(
-            img.GetDimension()).GetMatrix())
-
-    return sitk.Resample(
-        img,
-        size,
-        identityTransform,
-        interpolator,
-        origin,
-        spacing,
-        identityDirection,
-        outsideValue)
-
-#def imgPad(img, padding=0, useNearest=False):
-#    """
-#    Pads image by given ammount of padding in units spacing.
-#    For example if the input image has a voxel spacing of 0.5 and the padding=2.0 then the image will be padded by 4 voxels.
-#    If the padding < 0 then the filter crops the image
-#    """
-#    if util.is_number(padding):
-#        padding = [padding] * img.GetDimension()
-#    elif len(padding) != img.GetDimension():
-#        raise Exception(
-#            "padding must have length {0}.".format(img.GetDimension()))
-#
-#    interpolator = [sitk.sitkLinear, sitk.sitkNearestNeighbor][useNearest]
-#    translationTransform = sitk.TranslationTransform(
-#        img.GetDimension(), -np.array(padding))
-#    spacing = img.GetSpacing()
-#    size = list(img.GetSize())
-#    for i in range(img.GetDimension()):
-#        if padding[i] > 0:
-#            paddingVoxel = int(math.ceil(2 * padding[i] / spacing[i]))
-#        else:
-#            paddingVoxel = int(math.floor(2 * padding[i] / spacing[i]))
-#        size[i] += paddingVoxel
-#
-#    origin = [0] * img.GetDimension()
-#    return sitk.Resample(img, size, translationTransform,
-#                         interpolator, origin, spacing)
-
-def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientation='pir'):
-    img = imgResample(img, spacing)
-    mask_dilation_radius = 10 # voxels
-    mask = sitk.BinaryDilate(create_mask(img, use_triangle=True), mask_dilation_radius)
-    if modality.lower() == 'colm': mask = None
-    img_bc = correct_bias_field(img, scale=0.25, spline_order=4, mask=mask,
-                                                num_control_pts=[5,5,5],
-                                                niters=[500, 500, 500, 500])
-    img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
-    img_bc_n = sitk.Normalize(img_bc)
-    return img_bc_n
+    img = sitk.Cast(img, ref_img.GetPixelID())
+    return sitk.HistogramMatchingImageFilter().Execute(
+        img, ref_img, numBins, numMatchPoints, False)
