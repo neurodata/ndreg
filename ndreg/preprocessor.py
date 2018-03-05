@@ -246,13 +246,23 @@ def imgResample(img, spacing, size=[], useNearest=False,
         outsideValue)
 
 def normalize(img, percentile=0.99):
+    if percentile < 0.0 or percentile > 1.0:
+        raise Exception("Percentile should be between 0.0 and 1.0")
+
     #Accept ndarray images or sitk images
     if type(img) is np.ndarray:
         sitk_img = sitk.GetImageFromArray(img)
     else:
         sitk_img = img
 
-    max_val = ndreg.imgPercentile(sitk_img, percentile)
+    #just taking code from ndreg.py....
+    (values, bins) = np.histogram(sitk.GetArrayFromImage(img), bins=255)
+    cumValues = np.cumsum(values).astype(float)
+    cumValues = (cumValues - cumValues.min()) / cumValues.ptp()
+
+    index = np.argmax(cumValues > percentile) - 1
+    max_val = bins[index]
+
     return sitk.Clamp(sitk_img, upperBound=max_val) / max_val
 
 #def imgPad(img, padding=0, useNearest=False):
