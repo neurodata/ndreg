@@ -117,7 +117,7 @@ def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
             mask = mask_sitk
         mask = imgResample(mask, spacing=spacing)
     
-    img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, niters)
+    img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, 0.001, niters)
     bias_ds = img_ds_bc / sitk.Cast(img_ds, img_ds_bc.GetPixelID())
     
 
