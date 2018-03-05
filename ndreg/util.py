@@ -6,7 +6,6 @@ import SimpleITK as sitk
 
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
-dimension = 3
 
 def is_iterable(variable):
     """
@@ -103,7 +102,7 @@ def imgWrite(img, path):
     dir_make(os.path.dirname(path))
     sitk.WriteImage(img, path)
 
-def vtkReformat(inPath, outPath):
+def vtkReformat(inPath, outPath, dimension=3):
     """
     Reformats vtk file so that it can be read by CIS software.
     """
@@ -127,7 +126,7 @@ def vtkReformat(inPath, outPath):
                 size[2] - 1, size[1] - 1, size[0] - 1) + newline
         outFile.write(line)
 
-def imgCollapseDimension(inImg):
+def imgCollapseDimension(inImg, dimension=3):
     inSize = inImg.GetSize()
 
     if inImg.GetDimension() == dimension and inSize[dimension - 1] == 1:

@@ -42,7 +42,6 @@ def register_brain(atlas, img, modality, outdir=None):
                                                                                                     out_dir=outdir + 'lddmm')
     return atlas_lddmm
 
-
 def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
     """
     Performs affine registration between an atlas an an image given that they have the same spacing.
@@ -536,3 +535,24 @@ def imgMetamorphosisLogParser(logPath):
         dataArray = np.concatenate((dataArray, dataRow), axis=0)
 
     return dataArray
+
+def imgChecker(inImg, refImg, useHM=True, pattern=None):
+    """
+    Checkerboards input image with reference image
+    """
+    inImg = sitk.Cast(inImg, refImg.GetPixelID())
+    inSize = list(inImg.GetSize())
+    refSize = list(refImg.GetSize())
+    if pattern is None: pattern = [4]*inImg.GetDimension()
+
+    if(inSize != refSize):
+        sourceSize = np.array([inSize, refSize]).min(0)
+        # Empty image with same size as reference image
+        tmpImg = sitk.Image(refSize, refImg.GetPixelID())
+        tmpImg.CopyInformation(refImg)
+        inImg = sitk.Paste(tmpImg, inImg, sourceSize)
+
+    if useHM:
+        inImg = preprocessor.imgHM(inImg, refImg)
+
+    return sitk.CheckerBoardImageFilter().Execute(inImg, refImg, pattern)

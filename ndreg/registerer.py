@@ -12,15 +12,6 @@ import util
 import preprocessor
 from itertools import product
 
-dimension = 3
-vectorComponentType = sitk.sitkFloat32
-vectorType = sitk.sitkVectorFloat32
-affine = sitk.AffineTransform(dimension)
-identityAffine = list(affine.GetParameters())
-identityDirection = identityAffine[0:9]
-zeroOrigin = [0] * dimension
-zeroIndex = [0] * dimension
-
 def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations=1000, epsilon=None, minEpsilon=None, sigma=1e-4, useNearest=False,
                      useBias=False, useMI=False, verbose=False, debug=False, inMask=None, refMask=None, outDirPath=""):
     """
@@ -206,8 +197,6 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
         shutil.rmtree(outDirPath)
     return (compositeField, compositeInvField)
 
-
-
 def resample(image, transform, ref_img, default_value=0.0):
     # Output image Origin, Spacing, Size, Direction are taken from the reference
     # image in this call to Resample
@@ -252,7 +241,7 @@ def imgApplyField(img, field, useNearest=False,
                          0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
 
 
-def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[]):
+def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=[0,0,0]):
     inDimension = inImg.GetDimension()
 
     # Set interpolator
@@ -278,7 +267,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[]):
     # Set size
     if size == []:
         # Compute size to contain entire output image
-        size = sizeOut(inImg, affineTransform, spacing)
+        size = sizeOut(inImg, affine, spacing)
     else:
         if len(size) != inDimension:
             raise Exception(
@@ -286,7 +275,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[]):
 
     # Apply affine transform
     outImg = sitk.Resample(inImg, size, affineTransform,
-                           interpolator, zeroOrigin, spacing)
+                           interpolator, origin, spacing)
 
     return outImg
 
@@ -331,13 +320,13 @@ def fieldApplyField(inField, field, size=[], spacing=[]):
     direction = np.eye(inDimension).flatten().tolist()
     origin = [0] * inDimension
     return sitk.TransformToDisplacementFieldFilter().Execute(
-        outTransform, vectorType, size, origin, spacing, direction)
+        outTransform, sitk.sitkVectorFloat32, size, origin, spacing, direction)
 
 
 
 def createTmpRegistration(inMask=None, refMask=None,
-                          samplingFraction=1.0, dimension=dimension):
-    identityTransform = sitk.Transform(dimension, sitk.sitkIdentity)
+                          samplingFraction=1.0, dimension=3):
+    identityTransform = sitk.Transform(3, sitk.sitkIdentity)
     tmpRegistration = sitk.ImageRegistrationMethod()
     tmpRegistration.SetInterpolator(sitk.sitkNearestNeighbor)
     tmpRegistration.SetInitialTransform(identityTransform)
@@ -407,27 +396,6 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
         sitk.Cast(refImg, sitk.sitkFloat32), sitk.Cast(inImg, sitk.sitkFloat32))
 
     return tmpRegistration.GetMetricValue()
-
-def imgChecker(inImg, refImg, useHM=True, pattern=None):
-    """
-    Checkerboards input image with reference image
-    """
-    inImg = sitk.Cast(inImg, refImg.GetPixelID())
-    inSize = list(inImg.GetSize())
-    refSize = list(refImg.GetSize())
-    if pattern is None: pattern = [4]*inImg.GetDimension()
-
-    if(inSize != refSize):
-        sourceSize = np.array([inSize, refSize]).min(0)
-        # Empty image with same size as reference image
-        tmpImg = sitk.Image(refSize, refImg.GetPixelID())
-        tmpImg.CopyInformation(refImg)
-        inImg = sitk.Paste(tmpImg, inImg, sourceSize)
-
-    if useHM:
-        inImg = preprocessor.imgHM(inImg, refImg)
-
-    return sitk.CheckerBoardImageFilter().Execute(inImg, refImg, pattern)
 
 def sizeOut(inImg, transform, outSpacing):
     """
