@@ -48,6 +48,6 @@ WORKDIR /work/ndreg
 RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
 WORKDIR /run
-RUN cp /work/ndreg/ndreg_demo.ipynb ./
+RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
