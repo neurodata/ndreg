@@ -42,8 +42,8 @@ RUN pip install ipython[all] jupyter scikit-image scikit-learn
 
 # Build ndreg. Cache based on last commit.
 WORKDIR /work
-ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/vik-dev version.json
-RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch vik-dev --single-branch
+ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
+RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 WORKDIR /work/ndreg
 RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
