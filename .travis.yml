@@ -13,4 +13,5 @@ script:
       - docker ps | grep -q ndreg-vik
     
 after_success:
+      - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
       - docker push neurodata/ndreg
