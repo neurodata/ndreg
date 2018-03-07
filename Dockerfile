@@ -49,5 +49,7 @@ RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
 WORKDIR /run
 RUN cp /work/ndreg/ndreg_demo.ipynb ./
+ADD ../data/ /run/data/
+
 EXPOSE 9999
 CMD ["jupyter", "notebook", "--port=9999", "--no-browser", "--ip=0.0.0.0", "--allow-root", "--NotebookApp.iopub_data_rate_limit=10000000000"]
