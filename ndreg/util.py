@@ -1,8 +1,9 @@
 import subprocess
 import os
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import SimpleITK as sitk
+import numpy as np
 
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"

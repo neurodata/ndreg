@@ -4,12 +4,9 @@ import numpy as np
 import tempfile
 import SimpleITK as sitk
 import skimage
-import matplotlib
-from matplotlib import pyplot as plt
-
 import shutil
 import util
-import preprocessor
+import preprocessor, plotter
 from itertools import product
 
 def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations=1000, epsilon=None, minEpsilon=None, sigma=1e-4, useNearest=False,
@@ -81,7 +78,6 @@ def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations
     if useTempDir:
         shutil.rmtree(outDirPath)
     return (field, invField)
-
 
 def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scaleList=1.0, iterations=1000, epsilonList=None, minEpsilonList=None, sigma=1e-4,
                               useNearest=False, useBias=False, useMI=False, inMask=None, refMask=None, verbose=True, debug=False, outDirPath=""):
@@ -183,15 +179,13 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
         if(inMask):
             inMask = imgApplyField(origInMask,
                                    compositeField, size=refImg.GetSize(), useNearest=True)
-        # vikram added this
-#        if verbose: imgShow(inImg, vmax=imgPercentile(inImg, 0.99))
 
     # Write final results
     if outDirPath != "":
         util.imgWrite(compositeField, outDirPath + "field.vtk")
         util.imgWrite(compositeInvField, outDirPath + "invField.vtk")
         util.imgWrite(inImg, outDirPath + "out.img")
-        util.imgWrite(imgChecker(inImg, refImg), outDirPath + "checker.img")
+        util.imgWrite(plotter.imgChecker(inImg, refImg), outDirPath + "checker.img")
 
     if useTempDir:
         shutil.rmtree(outDirPath)
@@ -239,7 +233,6 @@ def imgApplyField(img, field, useNearest=False,
     # Apply displacement transform
     return sitk.Resample(img, size, transform, interpolator, [
                          0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
-
 
 def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=[0,0,0]):
     inDimension = inImg.GetDimension()
@@ -322,8 +315,6 @@ def fieldApplyField(inField, field, size=[], spacing=[]):
     return sitk.TransformToDisplacementFieldFilter().Execute(
         outTransform, sitk.sitkVectorFloat32, size, origin, spacing, direction)
 
-
-
 def createTmpRegistration(inMask=None, refMask=None,
                           samplingFraction=1.0, dimension=3):
     identityTransform = sitk.Transform(3, sitk.sitkIdentity)
@@ -353,7 +344,6 @@ def imgNorm(img):
     stats.Execute(img)
     return stats.GetSum()
 
-
 def imgMI(inImg, refImg, inMask=None, refMask=None,
           numBins=128, samplingFraction=1.0):
     """
@@ -378,7 +368,6 @@ def imgMI(inImg, refImg, inMask=None, refMask=None,
 
     return -tmpRegistration.GetMetricValue()
 
-
 def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
     """
     Compute mean square error between input and reference images
@@ -397,7 +386,6 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
 
     return tmpRegistration.GetMetricValue()
 
-def sizeOut(inImg, transform, outSpacing):
     """
     Calculates size of bounding box which encloses transformed image
     """

@@ -41,8 +41,8 @@ def register_brain(atlas, img, modality, outdir=None):
     # make the dir if it doesn't exist
     util.dir_make(outdir)
     sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
-    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=imgPercentile(atlas,0.01))
-    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=imgPercentile(img,0.01))
+    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=util.img_percentile(atlas,0.01))
+    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=util.img_percentile(img,0.01))
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
@@ -178,36 +178,3 @@ def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, sh
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
     return final_transform
-
-
-def imgMetamorphosisLogParser(logPath):
-    logText = util.txt_read(logPath)
-    lineList = logText.split("\n")
-
-    for (lineIndex, line) in enumerate(lineList):
-        if "E, E_velocity, E_rate, E_image" in line:
-            break
-
-    dataArray = np.empty((0, 5), float)
-    for line in lineList[lineIndex:]:
-        if "E =" in line:
-            break
-
-        try:
-            (iterationString, dataString) = line.split(".\t")
-        except BaseException:
-            continue
-
-        (energyString, velocityEnergyString, rateEnergyString,
-         imageEnergyString, learningRateString) = (dataString.split(","))
-        (energy, velocityEnergy, rateEnergy, learningRate) = map(float, [
-            energyString, velocityEnergyString, rateEnergyString, learningRateString])
-        (imageEnergy, imageEnergyPercent) = map(
-            float, imageEnergyString.replace("(", "").replace("%)", "").split())
-
-        imageEnergy = float(imageEnergyString.split(" (")[0])
-        dataRow = np.array(
-            [[energy, imageEnergyPercent / 100, velocityEnergy, learningRate, rateEnergy]])
-        dataArray = np.concatenate((dataArray, dataRow), axis=0)
-
-    return dataArray
