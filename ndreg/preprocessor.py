@@ -11,7 +11,7 @@ import util
 
 def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientation='pir'):
     """Perform all preprocessing steps associated with a given imaging modality.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -24,7 +24,7 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
         A 3-letter string describing the orientation of the brain along the x, y, and z axes. See (http://www.grahamwideman.com/gw/brain/orientation/orientterms.htm) for more information
     atlas_orientation : {str}, optional
         Orientation of the atlas you are using. (the default is 'pir', which is the orientation for the Allen Reference Atlas.)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
@@ -42,19 +42,19 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
 
 def create_mask(img, use_triangle=False):
     """Creates a mask of the image to separate brain from background using triangle or otsu thresholding. Otsu thresholding is the default.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
         Image to compute the mask on.
     use_triangle : {bool}, optional
         Set to True if you want to use triangle thresholding. (the default is False, which results in Otsu thresholding)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
         Binary mask with 1s as the foreground and 0s as the background.
-    """ 
+    """
 
     test_mask = None
     if use_triangle:
@@ -78,7 +78,7 @@ def create_mask(img, use_triangle=False):
 
 def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
     """Correct bias field in image using the N4ITK algorithm (http://bit.ly/2oFwAun)
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -89,7 +89,7 @@ def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
         Scale at which to compute the bias correction. (the default is 0.25, which results in bias correction computed on an image downsampled to 1/4 of it's original size)
     niters : {list}, optional
         Number of iterations per resolution. Each additional entry in the list adds an additional resolution at which the bias is estimated. (the default is [50, 50, 50, 50] which results in 50 iterations per resolution at 4 resolutions)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
@@ -103,11 +103,11 @@ def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
     stats.Execute(img)
     std = math.sqrt(stats.GetVariance())
     img_rescaled = sitk.Cast(img, sitk.sitkFloat32) + 0.1*std
-    
+
     spacing = np.array(img_rescaled.GetSpacing())/scale
     img_ds = imgResample(img_rescaled, spacing=spacing)
     img_ds = sitk.Cast(img_ds, sitk.sitkFloat32)
-    
+
 
     # Calculate bias
     if mask is None:
@@ -119,10 +119,10 @@ def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
             mask_sitk.CopyInformation(img)
             mask = mask_sitk
         mask = imgResample(mask, spacing=spacing)
-    
+
     img_ds_bc = sitk.N4BiasFieldCorrection(img_ds, mask, 0.001, niters)
     bias_ds = img_ds_bc / sitk.Cast(img_ds, img_ds_bc.GetPixelID())
-    
+
 
     # Upsample bias
     bias = imgResample(bias_ds, spacing=img.GetSpacing(), size=img.GetSize())
@@ -132,7 +132,7 @@ def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
 
 def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
     """Remove the gridding artifact from COLM images.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -143,7 +143,7 @@ def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
         The variance of the gaussian used to blur the image. Larger sigma means more grid correction but stronger edge artifacts. (the default is 10, which empirically works well our data at 50 um)
     mask : {SimpleITK.SimpleITK.Image}, optional
         An image with 1s representing the foreground (brain) and 0s representing the background. (the default is None, which will use otsu thresholding to create the brain mask.)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
@@ -169,7 +169,7 @@ def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
 
 def imgReorient(img, in_orient, out_orient):
     """Reorients input image to match out_orient.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -178,7 +178,7 @@ def imgReorient(img, in_orient, out_orient):
         3-letter string indicating orientation of brain.
     out_orient : {str}
         3-letter string indicating desired orientation of input.
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
@@ -230,7 +230,7 @@ def imgReorient(img, in_orient, out_orient):
 
 def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outsideValue=0):
     """Resample image to certain spacing and size.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -245,14 +245,14 @@ def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outside
         The location in physical space representing the [0,0,0] voxel in the input image. (the default is [0,0,0])
     outsideValue : {int}, optional
         value used to pad are outside image (the default is 0)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
         Resampled input image.
     """
 
-            
+
     if len(spacing) != img.GetDimension():
         raise Exception(
             "len(spacing) != " + str(img.GetDimension()))
@@ -285,6 +285,26 @@ def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outside
         identityDirection,
         outsideValue)
 
+def normalize(img, percentile=0.99):
+    if percentile < 0.0 or percentile > 1.0:
+        raise Exception("Percentile should be between 0.0 and 1.0")
+
+    #Accept ndarray images or sitk images
+    if type(img) is np.ndarray:
+        sitk_img = sitk.GetImageFromArray(img)
+    else:
+        sitk_img = img
+
+    #just taking code from ndreg.py....
+    (values, bins) = np.histogram(sitk.GetArrayFromImage(sitk_img), bins=255)
+    cumValues = np.cumsum(values).astype(float)
+    cumValues = (cumValues - cumValues.min()) / cumValues.ptp()
+
+    index = np.argmax(cumValues > percentile) - 1
+    max_val = bins[index]
+
+    return sitk.Clamp(sitk_img, upperBound=max_val) / max_val
+
 def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing, size=[], set_origin=True, dv_atlas=0.0, dv_target=0.0):
     """
     make sure img1 is the source and img2 is the target.
@@ -306,7 +326,7 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     out_target = resampler.Execute(target_r)
     resampler.SetDefaultPixelValue(dv_atlas)
     out_atlas = resampler.Execute(atlas)
-    
+
     assert(out_target.GetOrigin() == out_atlas.GetOrigin())
     assert(out_target.GetSize() == out_atlas.GetSize())
     assert(out_target.GetSpacing() == out_atlas.GetSpacing())
@@ -314,7 +334,7 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
 
 def imgHM(img, ref_img, numMatchPoints=64, numBins=256):
     """Performs histogram matching on two images.
-    
+
     Parameters:
     ----------
     img : {SimpleITK.SimpleITK.Image}
@@ -325,7 +345,7 @@ def imgHM(img, ref_img, numMatchPoints=64, numBins=256):
         number of quantile values to be matched. (the default is 64)
     numBins : {int}, optional
         Number of bins used in  computation of the histogram(the default is 256)
-    
+
     Returns
     -------
     SimpleITK.SimpleITK.Image
