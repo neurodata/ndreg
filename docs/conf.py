@@ -175,6 +175,7 @@ texinfo_documents = [
     (master_doc, 'ndreg', 'ndreg Documentation',
      author, 'ndreg', 'One line description of project.',
      'Miscellaneous'),
+]
 
 import matplotlib
 matplotlib.use('agg')
