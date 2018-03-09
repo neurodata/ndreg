@@ -5,6 +5,7 @@ import shutil
 import util
 from itertools import product
 
+
 def resample(image, transform, ref_img, default_value=0.0):
     # Output image Origin, Spacing, Size, Direction are taken from the reference
     # image in this call to Resample
@@ -200,7 +201,6 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
 
     return tmpRegistration.GetMetricValue()
 
-def sizeOut(inImg, transform, outSpacing):
     """
     Calculates size of bounding box which encloses transformed image
     """

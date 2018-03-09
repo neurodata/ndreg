@@ -34,7 +34,6 @@ sys.path.insert(0, project_root)
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#
 #needs_sphinx = '1.3'
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -176,7 +175,6 @@ texinfo_documents = [
     (master_doc, 'ndreg', 'ndreg Documentation',
      author, 'ndreg', 'One line description of project.',
      'Miscellaneous'),
-]
 
 import matplotlib
 matplotlib.use('agg')
