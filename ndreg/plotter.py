@@ -357,13 +357,13 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
     
     # Draw the fixed image in the first subplot.
     plt.subplot(1,2,1)
-    plt.imshow(fixed_npa[fixed_image_z,:,:],cmap=plt.cm.Greys)
+    plt.imshow(fixed_npa[fixed_image_z,:,:],cmap=plt.cm.gray)
     plt.title('fixed image')
     plt.axis('off')
     
     # Draw the moving image in the second subplot.
     plt.subplot(1,2,2)
-    plt.imshow(moving_npa[moving_image_z,:,:],cmap=plt.cm.Greys)
+    plt.imshow(moving_npa[moving_image_z,:,:],cmap=plt.cm.gray)
     plt.title('moving image')
     plt.axis('off')
     
@@ -376,7 +376,7 @@ from IPython.display import clear_output
 
 def display_slices_with_alpha(fixed, moving, alpha, vmax):
     img = (1.0 - alpha)*fixed + alpha*moving
-    plt.imshow(sitk.GetArrayViewFromImage(img),cmap=plt.cm.Greys, vmax=vmax)
+    plt.imshow(sitk.GetArrayViewFromImage(img),cmap=plt.cm.gray, vmax=vmax)
     plt.axis('off')
     plt.show()
 

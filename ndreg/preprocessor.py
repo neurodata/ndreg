@@ -156,8 +156,8 @@ def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
     out = np.ma.array(img_np, mask=mask)
     # compute masked average
     mean_z = np.ma.average(out, axis=z_axis)
-    stdev = math.sqrt(np.var(mean_z))
-    small_factor = 0.1
+    #stdev = math.sqrt(np.var(mean_z))
+    #small_factor = 0.1
     bias_z_slice = filters.gaussian_filter(mean_z, sigma)/(mean_z)
     bias_z_img = np.expand_dims(bias_z_slice, z_axis)
     test = np.repeat(bias_z_img, img.GetSize()[z_axis], axis=z_axis)
