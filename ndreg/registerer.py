@@ -200,18 +200,3 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
         sitk.Cast(refImg, sitk.sitkFloat32), sitk.Cast(inImg, sitk.sitkFloat32))
 
     return tmpRegistration.GetMetricValue()
-
-    """
-    Calculates size of bounding box which encloses transformed image
-    """
-    outCornerPointList = []
-    inSize = inImg.GetSize()
-    for corner in product((0, 1), repeat=inImg.GetDimension()):
-        inCornerIndex = np.array(corner) * np.array(inSize)
-        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex)
-        outCornerPoint = transform.GetInverse().TransformPoint(inCornerPoint)
-        outCornerPointList += [list(outCornerPoint)]
-
-    size = np.ceil(np.array(outCornerPointList).max(
-        0) / outSpacing).astype(int)
-    return size

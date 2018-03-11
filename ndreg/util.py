@@ -148,7 +148,7 @@ def imgRead(path):
 
     return inImg
 
-def imgPercentile(img, percentile):
+def img_percentile(img, percentile):
     if percentile < 0.0 or percentile > 1.0:
         raise Exception("Percentile should be between 0.0 and 1.0")
 

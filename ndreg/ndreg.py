@@ -64,6 +64,7 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
                                                                                                     min_epsilon_list=e*1e-6,
                                                                                                     use_mi=False, iterations=50, verbose=True,
                                                                                                     out_dir=outdir + 'lddmm')
+
     return atlas_lddmm
 
 def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
@@ -350,9 +351,9 @@ def imgMetamorphosisComposite(inImg, refImg, alphaList=0.02, betaList=0.05, scal
                 util.imgWrite(compositeInvField, invFieldPath)
                 util.imgWrite(compositeField, fieldPath)
 
-        inImg = imgApplyField(origInImg, compositeField, size=refImg.GetSize())
+        inImg = registerer.imgApplyField(origInImg, compositeField, size=refImg.GetSize())
         if(inMask):
-            inMask = imgApplyField(origInMask,
+            inMask = registerer.imgApplyField(origInMask,
                                    compositeField, size=refImg.GetSize(), useNearest=True)
 
     # Write final results
