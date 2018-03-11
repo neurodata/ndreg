@@ -1,5 +1,5 @@
 # ndreg
-[![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)]()
+[![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)](https://travis-ci.org/#)
 [![Documentation Status](https://readthedocs.org/projects/ndreg/badge/?version=latest)](http://ndreg.readthedocs.io/en/latest/?badge=latest)
 [![DockerHub](https://img.shields.io/docker/pulls/neurodata/ndreg.svg)](https://hub.docker.com/r/neurodata/ndreg)
 <br/>
