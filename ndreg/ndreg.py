@@ -9,7 +9,7 @@ import shutil
 from matplotlib.ticker import ScalarFormatter
 import util, registerer, preprocessor, plotter
 
-def register_brain(atlas, img, modality, outdir=None):
+def register_brain(atlas, img, modality, spacing=None, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
     
     Parameters:
@@ -28,10 +28,13 @@ def register_brain(atlas, img, modality, outdir=None):
     SimpleITK.SimpleITK.Image
         The atlas deformed to fit the input image.
     """
-
+    if spacing is None: spacing = atlas.GetSpacing()
     if outdir is None: outdir = './'
-    final_transform = register_affine(sitk.Normalize(atlas), 
-                                                img,
+    # resample both images to `spacing`
+    atlas_ds = preprocessor.imgResample(atlas, spacing)
+    img_ds = preprocessor.imgResample(img, spacing)
+    final_transform = register_affine(sitk.Normalize(atlas_ds), 
+                                                img_ds,
                                                 learning_rate=1e-1,
                                                 grad_tol=4e-6,
                                                 use_mi=False,
@@ -43,12 +46,12 @@ def register_brain(atlas, img, modality, outdir=None):
     # make the dir if it doesn't exist
     util.dir_make(outdir)
     sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
-    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=util.img_percentile(atlas,0.01))
-    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=util.img_percentile(img,0.01))
+    atlas_affine = registerer.resample(atlas_ds, final_transform, img_ds, default_value=util.img_percentile(atlas,0.01))
+    img_affine = registerer.resample(img_ds, final_transform.GetInverse(), atlas_ds, default_value=util.img_percentile(img,0.01))
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
-    img_w = sitk.AdaptiveHistogramEqualization(img, [10,10,10], alpha=0.25, beta=0.25)
+    img_w = sitk.AdaptiveHistogramEqualization(img_ds, [10,10,10], alpha=0.25, beta=0.25)
 
     # then run lddmm
     e = 5e-3
