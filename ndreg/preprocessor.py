@@ -296,7 +296,7 @@ def normalize(img, percentile=0.99):
         sitk_img = img
 
     #just taking code from ndreg.py....
-    (values, bins) = np.histogram(sitk.GetArrayFromImage(img), bins=255)
+    (values, bins) = np.histogram(sitk.GetArrayFromImage(sitk_img), bins=255)
     cumValues = np.cumsum(values).astype(float)
     cumValues = (cumValues - cumValues.min()) / cumValues.ptp()
 
