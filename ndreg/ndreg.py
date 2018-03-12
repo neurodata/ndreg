@@ -28,6 +28,7 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
     """
     if spacing is None: spacing = atlas.GetSpacing()
     if outdir is None: outdir = './'
+    whitening_radius = [int(i) for i in np.array([0.5, 0.5, 0.5]) / np.array(atlas.GetSpacing())] # mm
     # resample both images to `spacing`
     atlas_ds = preprocessor.imgResample(atlas, spacing)
     img_ds = preprocessor.imgResample(img, spacing)
@@ -46,8 +47,8 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
     atlas_affine = resample(atlas_ds, final_transform, img_ds, default_value=util.img_percentile(atlas,0.01))
 
     # whiten both images only before lddmm
-    atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
-    img_w = sitk.AdaptiveHistogramEqualization(img_ds, [10,10,10], alpha=0.25, beta=0.25)
+    atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, whitening_radius, alpha=0.25, beta=0.25)
+    img_w = sitk.AdaptiveHistogramEqualization(img_ds, whitening_radius, alpha=0.25, beta=0.25)
 
     # then run lddmm
     e = 5e-3
@@ -61,8 +62,10 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
                                                                                                     use_mi=False, iterations=50, verbose=True,
                                                                                                     out_dir=outdir + 'lddmm')
 
-
-    return atlas_lddmm
+    field_up = preprocessor.imgResample(field, atlas.GetSpacing())
+    atlas_affine_up = imgApplyAffine(atlas, final_transform.GetParameters())
+    atlas_lddmm_up = imgApplyField(atlas_affine_up, field_up)
+    return atlas_lddmm_up
 
 def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
     """
@@ -559,3 +562,19 @@ def imgMSE(inImg, refImg, inMask=None, refMask=None, samplingFraction=1.0):
         sitk.Cast(refImg, sitk.sitkFloat32), sitk.Cast(inImg, sitk.sitkFloat32))
 
     return tmpRegistration.GetMetricValue()
+
+def sizeOut(inImg, transform, outSpacing):
+    """
+    Calculates size of bounding box which encloses transformed image
+    """
+    outCornerPointList = []
+    inSize = inImg.GetSize()
+    for corner in product((0, 1), repeat=inImg.GetDimension()):
+        inCornerIndex = np.array(corner) * np.array(inSize)
+        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex)
+        outCornerPoint = transform.GetInverse().TransformPoint(inCornerPoint)
+        outCornerPointList += [list(outCornerPoint)]
+
+    size = np.ceil(np.array(outCornerPointList).max(
+        0) / outSpacing).astype(int)
+    return size
