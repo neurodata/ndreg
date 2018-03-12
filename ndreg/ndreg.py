@@ -32,10 +32,9 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
     atlas_ds = preprocessor.imgResample(atlas, spacing)
     img_ds = preprocessor.imgResample(img, spacing)
     final_transform = register_affine(sitk.Normalize(atlas_ds), 
-                                                img_ds,
+                                                sitk.Normalize(img_ds),
                                                 learning_rate=1e-1,
                                                 grad_tol=4e-6,
-                                                use_mi=False,
                                                 iters=50,
                                                 shrink_factors=[4,2,1],
                                                 sigmas=[0.4, 0.2, 0.1],
@@ -62,6 +61,7 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
                                                                                                     use_mi=False, iterations=50, verbose=True,
                                                                                                     out_dir=outdir + 'lddmm')
 
+
     return atlas_lddmm
 
 def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
@@ -74,7 +74,7 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
     if use_mi: registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=128)
     else: registration_method.SetMetricAsMeanSquares()
 
-    registration_method.SetInterpolator(sitk.sitkLinear)
+    registration_method.SetInterpolator(sitk.sitkBSpline)
 
     # Optimizer settings.
     registration_method.SetOptimizerAsRegularStepGradientDescent(learningRate=learning_rate,

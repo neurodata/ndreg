@@ -52,8 +52,5 @@ RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 WORKDIR /run
 RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./
 
-# Set up ipython
-RUN pip install ipython[all] jupyter 
-
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]

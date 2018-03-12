@@ -11,8 +11,7 @@ def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
     Displays an image.  Only 2D images are supported for now
     """
     if flip == None: flip = [0, 0, 0]
-    if newFig:
-        fig = plt.figure()
+    if newFig: plt.figure()
 
     if (vmin is None) or (vmax is None):
         stats = sitk.StatisticsImageFilter()
