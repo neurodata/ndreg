@@ -12,6 +12,5 @@ Welcome to ndreg's documentation!
 
    ndreg
    preprocessor
-   registerer
    util
 

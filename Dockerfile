@@ -29,9 +29,10 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   vim
 
 # delete apt-get lists to free up space
-RUN rm /var/lib/apt/lists/*
 
-#RUN pip install --upgrade pip
+RUN rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip setuptools
 #RUN pip install matplotlib SimpleITK numpy psutil pytest tifffile
 
 # We currently following 'master' to incorporate many recent bug fixes.
@@ -39,9 +40,6 @@ RUN rm /var/lib/apt/lists/*
 #RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
 #WORKDIR /work/intern
 #RUN python setup.py install
-
-# Set up ipython
-RUN pip install ipython[all] jupyter 
 
 # Build ndreg. Cache based on last commit.
 WORKDIR /work
@@ -53,5 +51,9 @@ RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
 WORKDIR /run
 RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./
+
+# Set up ipython
+RUN pip install ipython[all] jupyter 
+
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
