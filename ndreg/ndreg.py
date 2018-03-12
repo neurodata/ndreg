@@ -8,6 +8,25 @@ from matplotlib.ticker import ScalarFormatter
 import util, registerer, preprocessor
 
 def register_brain(atlas, img, modality, outdir=None):
+    """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
+    
+    Parameters:
+    ----------
+    atlas : {SimpleITK.SimpleITK.Image}
+        Allen reference atlas or other atlas to register data to.
+    img : {SimpleITK.SimpleITK.Image}
+        Input observed 3D mouse brain volume
+    modality : {str}
+        Can be 'lavision' or 'colm' for either modality.
+    outdir : {str}, optional
+        Path to output directory to store intermediates. (the default is None, which will store all outputs in './')
+    
+    Returns
+    -------
+    SimpleITK.SimpleITK.Image
+        The atlas deformed to fit the input image.
+    """
+
     if outdir is None: outdir = './'
     final_transform = register_affine(sitk.Normalize(atlas),
                                                 img,
@@ -22,8 +41,8 @@ def register_brain(atlas, img, modality, outdir=None):
     # make the dir if it doesn't exist
     util.dir_make(outdir)
     sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
-    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=imgPercentile(atlas,0.01))
-    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=imgPercentile(img,0.01))
+    atlas_affine = registerer.resample(atlas, final_transform, img, default_value=util.img_percentile(atlas,0.01))
+    img_affine = registerer.resample(img, final_transform.GetInverse(), atlas, default_value=util.img_percentile(img,0.01))
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)
@@ -637,3 +656,4 @@ def imgChecker(inImg, refImg, useHM=True, pattern=None):
         inImg = preprocessor.imgHM(inImg, refImg)
 
     return sitk.CheckerBoardImageFilter().Execute(inImg, refImg, pattern)
+
