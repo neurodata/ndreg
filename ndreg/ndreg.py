@@ -9,7 +9,7 @@ import util, registerer, preprocessor
 
 def register_brain(atlas, img, modality, outdir=None):
     if outdir is None: outdir = './'
-    final_transform = register_affine(sitk.Normalize(atlas), 
+    final_transform = register_affine(sitk.Normalize(atlas),
                                                 img,
                                                 learning_rate=1e-1,
                                                 grad_tol=4e-6,
@@ -32,9 +32,9 @@ def register_brain(atlas, img, modality, outdir=None):
     # then run lddmm
     e = 5e-3
     s = 0.1
-    atlas_lddmm, field, inv_field = register_lddmm(sitk.Normalize(atlas_affine_w), 
+    atlas_lddmm, field, inv_field = register_lddmm(sitk.Normalize(atlas_affine_w),
                                                                                                     sitk.Normalize(img_w),
-                                                                                                    alpha_list=[0.05], 
+                                                                                                    alpha_list=[0.05],
                                                                                                     scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
                                                                                                     epsilon_list=e, sigma=s,
                                                                                                     min_epsilon_list=e*1e-6,
@@ -65,7 +65,7 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
                                                                  numberOfIterations=iters)
     registration_method.SetOptimizerScalesFromPhysicalShift()
 
-    # Setup for the multi-resolution framework.            
+    # Setup for the multi-resolution framework.
     registration_method.SetShrinkFactorsPerLevel(shrinkFactors=shrink_factors)
     registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=sigmas)
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
@@ -82,14 +82,14 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
     if verbose:
         registration_method.AddCommand(sitk.sitkStartEvent, util.start_plot)
         registration_method.AddCommand(sitk.sitkEndEvent, util.end_plot)
-        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations)
         registration_method.AddCommand(sitk.sitkIterationEvent, lambda: util.plot_values(registration_method))
 
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
     return final_transform
 
-def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25, 0.5, 1.0], 
+def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25, 0.5, 1.0],
                    epsilon_list=1e-4, min_epsilon_list=1e-10, sigma=0.1, use_mi=False, iterations=200, inMask=None,
                    refMask=None, verbose=True, out_dir=''):
     if sigma == None:
@@ -104,12 +104,12 @@ def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 
                                                                                                 useMI=use_mi,
                                                                                                 inMask=inMask,
                                                                                                 refMask=refMask,
-                                                                                                iterations=iterations, 
+                                                                                                iterations=iterations,
                                                                                                 verbose=verbose,
                                                                                                 outDirPath=out_dir)
 
-    source_lddmm = registerer.imgApplyField(affine_img, field, 
-                                            size=target_img.GetSize(), 
+    source_lddmm = registerer.imgApplyField(affine_img, field,
+                                            size=target_img.GetSize(),
                                             spacing=target_img.GetSpacing())
     return source_lddmm, field, invField
 
@@ -136,7 +136,7 @@ def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, sh
                                                                  numberOfIterations=iters)
     registration_method.SetOptimizerScalesFromPhysicalShift()
 
-    # Setup for the multi-resolution framework.            
+    # Setup for the multi-resolution framework.
     registration_method.SetShrinkFactorsPerLevel(shrinkFactors=shrink_factors)
     registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=sigmas)
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
@@ -153,12 +153,93 @@ def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, sh
     if verbose:
         registration_method.AddCommand(sitk.sitkStartEvent, util.start_plot)
         registration_method.AddCommand(sitk.sitkEndEvent, util.end_plot)
-        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations)
         registration_method.AddCommand(sitk.sitkIterationEvent, lambda: util.plot_values(registration_method))
 
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
     return final_transform
+
+
+def register_rigid_n_way(image_list,
+                             epsilon = 1e-2,
+                             medians = 10,
+                             learning_rate=1e-2,
+                             iters=200,
+                             min_step=1e-10,
+                             shrink_factors=[1],
+                             sigmas=[.150],
+                             use_mi=False,
+                             grad_tol=1e-6,
+                             verbose=False):
+
+    """
+    Register N 3-D images with rigid transformation.
+    https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3389460/
+
+    1. Compute median of input images
+    2. Register and resample images with median as atlas
+    3. Repeat until transforms converge
+
+
+    Parameters:
+        n-way:
+            image_list,    - input images (array of SimpleITK.SimpleITK.Image s)
+            epsilon = 1e-2 - convergence threshold: MSE between consecutive median atlases
+            medians = 10,  - maximum number of medians to calculate (upper limit for running time)
+
+        register_rigid:
+            learning_rate=1e-2,
+            iters=200,
+            min_step=1e-10,
+            shrink_factors=[1],
+            sigmas=[.150],
+            use_mi=False,
+            grad_tol=1e-6,
+            verbose=False
+
+    """
+
+    depth = min([img.GetDepth() for img in image_list])
+    source_images = [img[:,:,:depth] for img in image_list]
+
+    atlas = sitk.GetImageFromArray(np.median([sitk.GetArrayFromImage(img) for img in image_list], axis=0))
+
+    errors = []
+    #init tranforms to identity and compose new transforms on top of it
+    final_transforms = [sitk.Transform(sitk.TranslationTransform(3, (0,0,0))) for i in range(len(images))]
+
+    #repeat until convergence
+    for _ in range(medians):
+        new_images = []
+        for i in range(len(source_images)):
+            print("Image {} of {}".format(i+1, len(source_images)))
+            img = source_images[i]
+            transform = registerer.register_rigid(atlas, img,
+                                                        learning_rate=learning_rate,
+                                                        iters=iters,
+                                                        min_step=min_step,
+                                                        shrink_factors=shrink_factors,
+                                                        sigmas=sigmas,
+                                                        use_mi=use_mi,
+                                                        grad_tol=grad_tol,
+                                                        verbose=verbose)
+            new_images.append(registerer.resample(atlas, transform, img))
+            final_transforms[i].AddTransform(transform)
+
+        #images for next pass or output
+        source_images = new_images
+        new_atlas = sitk.GetImageFromArray(np.median(np.array(
+            [sitk.GetArrayFromImage(img) for img in source_images]), axis=0))
+
+        total_error = np.sum(calculate_error(atlas, new_atlas))
+        errors.append(total_error)
+
+        #Convergence check (early stopping)
+        if total_error < epsilon:
+            break
+    return final_transforms, errors
+
 
 
 def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
