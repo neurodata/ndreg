@@ -36,8 +36,8 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
     if modality.lower() == 'colm': mask = None
     img_bc = correct_bias_field(img, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
     img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
-    img_bc_n = sitk.Normalize(img_bc)
-    return img_bc_n
+    #img_bc_n = sitk.Normalize(img_bc)
+    return img_bc
 
 def create_mask(img, use_triangle=False):
     """Creates a mask of the image to separate brain from background using triangle or otsu thresholding. Otsu thresholding is the default.
