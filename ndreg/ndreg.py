@@ -407,7 +407,8 @@ def imgApplyField(img, field, useNearest=False,
     return sitk.Resample(img, size, transform, interpolator, [
                          0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
 
-def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, origin=[0,0,0]):
+def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, origin=None):
+    if origin == None: origin = [0,0,0]
     inDimension = inImg.GetDimension()
 
     # Set interpolator

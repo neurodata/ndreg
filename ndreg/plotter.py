@@ -374,7 +374,6 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
 
 # Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
 # of an image stack of two images that occupy the same physical space. 
-from ipywidgets import fixed
 from IPython.display import clear_output
 
 def display_slices_with_alpha(fixed, moving, alpha, vmax):
