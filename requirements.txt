@@ -89,3 +89,4 @@ urllib3==1.22
 wcwidth==0.1.7
 webencodings==0.5.1
 widgetsnbextension==3.1.4
+numpydoc==0.7.0
