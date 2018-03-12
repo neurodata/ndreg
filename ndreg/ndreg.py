@@ -5,6 +5,7 @@ import numpy as np
 import SimpleITK as sitk
 import tempfile
 import shutil
+from itertools import product
 import util,  preprocessor, plotter
 
 def register_brain(atlas, img, modality, spacing=None, outdir=None):
