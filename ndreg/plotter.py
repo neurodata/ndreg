@@ -6,10 +6,11 @@ import util
 import registerer, preprocessor
 
 def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
-            newFig=True, flip=[0, 0, 0], numSlices=3, useNearest=False):
+            newFig=True, flip=None, numSlices=3, useNearest=False):
     """
     Displays an image.  Only 2D images are supported for now
     """
+    if flip == None: flip = [0, 0, 0]
     if newFig:
         fig = plt.figure()
 
@@ -283,7 +284,8 @@ def imgChecker(inImg, refImg, useHM=True, pattern=None):
 
     return sitk.CheckerBoardImageFilter().Execute(inImg, refImg, pattern)
 
-def imgSlices(img, flip=[0, 0, 0], numSlices=1):
+def imgSlices(img, flip=None, numSlices=1):
+    if flip == None: flip = [0, 0, 0]
     size = img.GetSize()
     sliceImgList = []
     for i in range(img.GetDimension()):
@@ -306,7 +308,7 @@ def imgSlices(img, flip=[0, 0, 0], numSlices=1):
 
     return sliceImgList
 
-def imgGrid(size, spacing, step=[10, 10, 10], field=None):
+def imgGrid(size, spacing, step=None, field=None):
     """
     Creates a grid image using with specified size and spacing with distance between lines defined by step.
     If step is None along a dimention no grid lines will be plotted.
@@ -314,6 +316,7 @@ def imgGrid(size, spacing, step=[10, 10, 10], field=None):
     An optinal displacement field can be applied to the grid as well.
     """
 
+    if step == None: step = [10, 10, 10]
     if not(util.is_iterable(size)):
         raise Exception("size must be a list.")
     if not(util.is_iterable(spacing)):
@@ -371,7 +374,7 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
 
 # Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
 # of an image stack of two images that occupy the same physical space. 
-from ipywidgets import interact, fixed
+from ipywidgets import fixed
 from IPython.display import clear_output
 
 def display_slices_with_alpha(fixed, moving, alpha, vmax):

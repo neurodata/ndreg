@@ -71,18 +71,14 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
     registration_method = sitk.ImageRegistrationMethod()
 
     # Similarity metric settings.
-#     registration_method.SetMetricAsMeanSquares()
     if use_mi: registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=128)
     else: registration_method.SetMetricAsMeanSquares()
-    # registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
-    # registration_method.SetMetricSamplingPercentage(0.01)
 
-    registration_method.SetInterpolator(sitk.sitkBSpline)
+    registration_method.SetInterpolator(sitk.sitkLinear)
 
     # Optimizer settings.
     registration_method.SetOptimizerAsRegularStepGradientDescent(learningRate=learning_rate,
                                                                  minStep=min_step,
-    #                                                              estimateLearningRate=registration_method.EachIteration,
                                                                  gradientMagnitudeTolerance=grad_tol,
                                                                  numberOfIterations=iters)
     registration_method.SetOptimizerScalesFromPhysicalShift()
@@ -111,11 +107,12 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
     return final_transform
 
-def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 0.125, 0.25, 0.5, 1.0], 
+def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=None,
                    epsilon_list=1e-4, min_epsilon_list=1e-10, sigma=0.1, use_mi=False, iterations=200, inMask=None,
                    refMask=None, verbose=True, out_dir=''):
     if sigma == None:
         sigma = (0.1/target_img.GetNumberOfPixels())
+    if scale_list == None: scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0]
 
     (field, invField) = imgMetamorphosisComposite(affine_img, target_img,
                                                                                                 alphaList=alpha_list,
@@ -135,10 +132,12 @@ def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=[0.0625, 
                                             spacing=target_img.GetSpacing())
     return source_lddmm, field, invField
 
-def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
+def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=None, sigmas=None, use_mi=False, grad_tol=1e-6, verbose=False):
     """
     Performs affine registration between an atlas an an image given that they have the same spacing.
     """
+    if shrink_factors == None: shrink_factors = [1]
+    if sigmas == None: sigmas = [0.150]
     registration_method = sitk.ImageRegistrationMethod()
 
     # Similarity metric settings.
@@ -374,7 +373,7 @@ def resample(image, transform, ref_img, default_value=0.0):
                          interpolator, default_value)
 
 def imgApplyField(img, field, useNearest=False,
-                  size=[], spacing=[], defaultValue=0):
+                  size=None, spacing=None, defaultValue=0):
     """
     img \circ field
     """
@@ -389,7 +388,7 @@ def imgApplyField(img, field, useNearest=False,
     transform.SetDisplacementField(field)
 
     # Set size
-    if size == []:
+    if size == None:
         size = img.GetSize()
     else:
         if len(size) != img.GetDimension():
@@ -397,7 +396,7 @@ def imgApplyField(img, field, useNearest=False,
                 "size must have length {0}.".format(img.GetDimension()))
 
     # Set Spacing
-    if spacing == []:
+    if spacing == None:
         spacing = img.GetSpacing()
     else:
         if len(spacing) != img.GetDimension():
@@ -408,7 +407,7 @@ def imgApplyField(img, field, useNearest=False,
     return sitk.Resample(img, size, transform, interpolator, [
                          0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
 
-def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=[0,0,0]):
+def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, origin=[0,0,0]):
     inDimension = inImg.GetDimension()
 
     # Set interpolator
@@ -424,7 +423,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=
     affineTransform.SetParameters(affine)
 
     # Set Spacing
-    if spacing == []:
+    if spacing == None:
         spacing = inImg.GetSpacing()
     else:
         if len(spacing) != inDimension:
@@ -432,7 +431,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=
                 "spacing must have length {0}.".format(inDimension))
 
     # Set size
-    if size == []:
+    if size == None:
         # Compute size to contain entire output image
         size = sizeOut(inImg, affine, spacing)
     else:
@@ -446,13 +445,13 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=[], spacing=[], origin=
 
     return outImg
 
-def fieldApplyField(inField, field, size=[], spacing=[]):
+def fieldApplyField(inField, field, size=None, spacing=None):
     """ outField = inField \circ field """
     inField = sitk.Cast(inField, sitk.sitkVectorFloat64)
     field = sitk.Cast(field, sitk.sitkVectorFloat64)
     inDimension = inField.GetDimension()
 
-    if spacing == []:
+    if spacing == None:
         spacing = list(inField.GetSpacing())
     else:
         if len(spacing) != inDimension:
@@ -460,7 +459,7 @@ def fieldApplyField(inField, field, size=[], spacing=[]):
                 "spacing must have length {0}.".format(inDimension))
 
     # Set size
-    if size == []:
+    if size == None:
         # Compute size to contain entire output image
         size = list(inField.GetSize())
     else:
