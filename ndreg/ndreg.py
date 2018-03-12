@@ -418,15 +418,6 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
     # Set interpolator
     interpolator = [sitk.sitkLinear, sitk.sitkNearestNeighbor][useNearest]
 
-    # Set affine parameters
-    affineTransform = sitk.AffineTransform(inDimension)
-    numParameters = len(affineTransform.GetParameters())
-    if (len(affine) != numParameters):
-        raise Exception(
-            "affine must have length {0}.".format(numParameters))
-    affineTransform = sitk.AffineTransform(inDimension)
-    affineTransform.SetParameters(affine)
-
     # Set Spacing
     if spacing == None:
         spacing = inImg.GetSpacing()
@@ -445,7 +436,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
                 "size must have length {0}.".format(inDimension))
 
     # Apply affine transform
-    outImg = sitk.Resample(inImg, size, affineTransform,
+    outImg = sitk.Resample(inImg, size, affine,
                            interpolator, origin, spacing)
 
     return outImg
