@@ -1,8 +1,8 @@
 FROM ubuntu:16.04
-
+LABEL maintainer="Vikram Chandrashekhar"
 RUN apt-get -y upgrade
 
-RUN apt-get update && apt-get -y install \
+RUN apt-get update && apt-get -y --no-install-recommends install \
   build-essential \
   python-pip \
   python-all-dev \
@@ -28,23 +28,27 @@ RUN apt-get update && apt-get -y install \
   gcc \
   vim
 
-RUN pip install --upgrade pip
-RUN pip install matplotlib SimpleITK numpy psutil pytest tifffile
+# delete apt-get lists to free up space
+RUN rm /var/lib/apt/lists/*
+
+#RUN pip install --upgrade pip
+#RUN pip install matplotlib SimpleITK numpy psutil pytest tifffile
 
 # We currently following 'master' to incorporate many recent bug fixes.
-WORKDIR /work
-RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
-WORKDIR /work/intern
-RUN python setup.py install
+#WORKDIR /work
+#RUN git clone https://github.com/jhuapl-boss/intern.git /work/intern --single-branch
+#WORKDIR /work/intern
+#RUN python setup.py install
 
 # Set up ipython
-RUN pip install ipython[all] jupyter scikit-image scikit-learn
+RUN pip install ipython[all] jupyter 
 
 # Build ndreg. Cache based on last commit.
 WORKDIR /work
 ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 WORKDIR /work/ndreg
+RUN pip install -r requirements.txt
 RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j16 && make install
 
 WORKDIR /run

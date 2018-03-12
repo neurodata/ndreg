@@ -1,10 +1,6 @@
 import numpy as np
-import tempfile
 import SimpleITK as sitk
-import shutil
 import util
-from itertools import product
-
 
 def resample(image, transform, ref_img, default_value=0.0):
     # Output image Origin, Spacing, Size, Direction are taken from the reference

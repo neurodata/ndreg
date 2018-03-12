@@ -41,9 +41,9 @@ def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
             sliceSize = list(size)
             sliceSize[2 - i] = 0
 
-            for (j, slice) in enumerate(sliceList):
+            for (j, slice_) in enumerate(sliceList):
                 sliceIndex = [0] * img.GetDimension()
-                sliceIndex[2 - i] = int(slice)
+                sliceIndex[2 - i] = int(slice_)
                 sliceImg = sitk.Extract(img, sliceSize, sliceIndex)
                 sliceArray = sitk.GetArrayFromImage(sliceImg)
                 if flip[i]:
@@ -354,15 +354,11 @@ def imgGrid(size, spacing, step=[10, 10, 10], field=None):
 def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
     # Create a figure with two subplots and the specified size.
     plt.subplots(1,2,figsize=(10,8))
-    
     # Draw the fixed image in the first subplot.
     plt.subplot(1,2,1)
-
     plt.imshow(fixed_npa[fixed_image_z,:,:],cmap=plt.cm.gray)
-
     plt.title('fixed image')
     plt.axis('off')
-    
     # Draw the moving image in the second subplot.
     plt.subplot(1,2,2)
 

@@ -3,10 +3,8 @@
 from __future__ import print_function
 import numpy as np
 import SimpleITK as sitk
-import matplotlib.pyplot as plt
 import tempfile
 import shutil
-from matplotlib.ticker import ScalarFormatter
 import util, registerer, preprocessor, plotter
 
 def register_brain(atlas, img, modality, spacing=None, outdir=None):
@@ -47,7 +45,6 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
     util.dir_make(outdir)
     sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
     atlas_affine = registerer.resample(atlas_ds, final_transform, img_ds, default_value=util.img_percentile(atlas,0.01))
-    img_affine = registerer.resample(img_ds, final_transform.GetInverse(), atlas_ds, default_value=util.img_percentile(img,0.01))
 
     # whiten both images only before lddmm
     atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, [10,10,10], alpha=0.25, beta=0.25)

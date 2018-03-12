@@ -7,7 +7,6 @@ from skimage import  morphology
 import scipy.ndimage.filters as filters
 import math
 import SimpleITK as sitk
-import util
 
 def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientation='pir'):
     """Perform all preprocessing steps associated with a given imaging modality.
@@ -326,10 +325,6 @@ def downsample_and_reorient(atlas, target, atlas_orient, target_orient, spacing,
     out_target = resampler.Execute(target_r)
     resampler.SetDefaultPixelValue(dv_atlas)
     out_atlas = resampler.Execute(atlas)
-
-    assert(out_target.GetOrigin() == out_atlas.GetOrigin())
-    assert(out_target.GetSize() == out_atlas.GetSize())
-    assert(out_target.GetSpacing() == out_atlas.GetSpacing())
     return out_atlas, out_target
 
 def imgHM(img, ref_img, numMatchPoints=64, numBins=256):
