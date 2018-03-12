@@ -64,7 +64,7 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
                                                                                                     out_dir=outdir + 'lddmm')
 
     field_up = preprocessor.imgResample(field, atlas.GetSpacing())
-    atlas_affine_up = imgApplyAffine(atlas, final_transform.GetParameters())
+    atlas_affine_up = imgApplyAffine(atlas, final_transform)
     atlas_lddmm_up = imgApplyField(atlas_affine_up, field_up)
     return atlas_lddmm_up
 
@@ -102,10 +102,10 @@ def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, s
 
     # Connect all of the observers so that we can perform plotting during registration.
     if verbose:
-        registration_method.AddCommand(sitk.sitkStartEvent, util.start_plot)
-        registration_method.AddCommand(sitk.sitkEndEvent, util.end_plot)
-        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations) 
-        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: util.plot_values(registration_method))
+        registration_method.AddCommand(sitk.sitkStartEvent, plotter.start_plot)
+        registration_method.AddCommand(sitk.sitkEndEvent, plotter.end_plot)
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, plotter.update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plotter.plot_values(registration_method))
 
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
@@ -176,10 +176,10 @@ def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, sh
 
     # Connect all of the observers so that we can perform plotting during registration.
     if verbose:
-        registration_method.AddCommand(sitk.sitkStartEvent, util.start_plot)
-        registration_method.AddCommand(sitk.sitkEndEvent, util.end_plot)
-        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, util.update_multires_iterations) 
-        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: util.plot_values(registration_method))
+        registration_method.AddCommand(sitk.sitkStartEvent, plotter.start_plot)
+        registration_method.AddCommand(sitk.sitkEndEvent, plotter.end_plot)
+        registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, plotter.update_multires_iterations) 
+        registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plotter.plot_values(registration_method))
 
     final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
                                                   sitk.Cast(atlas, sitk.sitkFloat32))
