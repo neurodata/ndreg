@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
 import util
-import registerer, preprocessor
+import preprocessor
 
 def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
             newFig=True, flip=None, numSlices=3, useNearest=False):
@@ -61,31 +61,6 @@ def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
     if newFig:
         plt.show()
 
-def imgShowResults(inImg, refImg, field, logPath=""):
-    numRows = 5
-    numCols = 3
-    defInImg = registerer.imgApplyField(inImg, field, size=refImg.GetSize())
-    checker = imgChecker(defInImg, refImg)
-
-    sliceList = []
-    for i in range(inImg.GetDimension()):
-        step = [5] * inImg.GetDimension()
-        step[2 - i] = None
-        grid = imgGrid(inImg.GetSize(), inImg.GetSpacing(),
-                       step=step, field=field)
-
-        sliceList.append(imgSlices(grid, flip=[0, 1, 1])[i])
-    fig = plt.figure()
-    imgShowResultsRow(inImg, numRows, numCols, 0, title="$I_0$")
-    imgShowResultsRow(defInImg, numRows, numCols, 1,
-                      title="$I_0 \circ \phi_{10}$")
-    imgShowResultsRow(checker, numRows, numCols, 2,
-                      title="$I_0$ and $I_1$\n Checker")
-    imgShowResultsRow(refImg, numRows, numCols, 3, title="$I_1$")
-    imgShowResultsRow(sliceList, numRows, numCols, 4, title="$\phi_{10}$")
-    fig.subplots_adjust(hspace=0.05, wspace=0)
-    plt.show()
-
 def imgShowResultsRow(img, numRows=1, numCols=3, rowIndex=0, title=""):
     if isinstance(img, list):
         sliceImgList = img
@@ -128,139 +103,6 @@ def imgMetamorphosisSlicePlotterRow(
         ax.set_xticks([])
         if i == 0:
             plt.ylabel(title, rotation=0, labelpad=40)
-
-def imgMetamorphosisSlicePlotter(inImg, refImg, field):
-    numRows = 5
-    numCols = 3
-    defInImg = registerer.imgApplyField(inImg, field, size=refImg.GetSize())
-    inImg = registerer.imgApplyAffine(
-        inImg, [
-            1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], size=refImg.GetSize())
-    checker = imgChecker(defInImg, refImg)
-
-    sliceList = []
-    for i in range(inImg.GetDimension()):
-        step = [20] * inImg.GetDimension()
-        step[2 - i] = None
-        grid = imgGrid(
-            inImg.GetSize(),
-            inImg.GetSpacing(),
-            step=step,
-            field=field)
-
-        sliceList.append(imgSlices(grid, flip=[0, 1, 1])[i])
-
-    imgMetamorphosisSlicePlotterRow(
-        inImg,
-        numRows,
-        numCols,
-        0,
-        title="$I_0$",
-        vmax=util.img_percentile(
-            inImg,
-            0.99))
-    imgMetamorphosisSlicePlotterRow(
-        defInImg,
-        numRows,
-        numCols,
-        1,
-        title="$I(1)$",
-        vmax=util.img_percentile(
-            defInImg,
-            0.99))
-    imgMetamorphosisSlicePlotterRow(
-        checker,
-        numRows,
-        numCols,
-        2,
-        title="$I(1)$ and $I_1$\n Checker",
-        vmax=util.img_percentile(
-            checker,
-            0.99))
-    imgMetamorphosisSlicePlotterRow(
-        refImg,
-        numRows,
-        numCols,
-        3,
-        title="$I_1$",
-        vmax=util.img_percentile(
-            refImg,
-            0.99))
-    imgMetamorphosisSlicePlotterRow(
-        sliceList, numRows, numCols, 4, title="$\phi_{10}$")
-    plt.gcf().subplots_adjust(hspace=0.1, wspace=0.025)
-
-#def imgMetamorphosisLogPlotter(
-#        logPathList, labelList=None, useLog=False, useTime=False):
-#    if not(util.is_iterable(logPathList)):
-#        raise Exception("logPathList should be a list.")
-#
-#    if labelList is None:
-#        labelList = ["Step {0}".format(i)
-#                     for i in range(1, len(logPathList) + 1)]
-#    else:
-#        if not(util.is_iterable(labelList)):
-#            raise Exception("labelList should be a list.")
-#        if len(labelList) != len(logPathList):
-#            raise Exception(
-#                "Number of labels should equal number of log files.")
-#
-#    initialPercent = 1.0
-#    initialX = 0
-#    levelXList = []
-#    levelPercentList = []
-#    for (i, logPath) in enumerate(logPathList):
-#        percentList = imgMetamorphosisLogParser(logPath)[:, 1] * initialPercent
-#        numIterations = len(percentList)
-#        if useTime:
-#            # Parse run time from log and convert to minutes
-#            time = float(util.txt_read(logPath).split(
-#                "Time = ")[1].split("s ")[0]) / 60.0
-#            xList = np.linspace(0, time, numIterations + 1)[1:] + initialX
-#        else:
-#            xList = np.arange(0, numIterations) + initialX
-#
-#        if not useLog:
-#            if i == 0:
-#                xList = np.array([initialX] + list(xList))
-#                percentList = np.array([initialPercent] + list(percentList))
-#
-#        levelXList += [xList]
-#        levelPercentList += [percentList]
-#
-#        initialPercent = percentList[-1]
-#        initialX = xList[-1]
-#
-#    for i in range(len(levelXList)):
-#        if i > 0:
-#            xList = np.concatenate((levelXList[i - 1][-1:], levelXList[i]))
-#            percentList = np.concatenate(
-#                (levelPercentList[i - 1][-1:], levelPercentList[i]))
-#
-#        else:
-#            xList = levelXList[i]
-#            percentList = levelPercentList[i]
-#
-#        plt.plot(xList, percentList, label=labelList[i], linewidth=1.5)
-#
-#    # Add plot annotations
-#    if useTime:
-#        plt.xlabel("Time (Minutes)")
-#    else:
-#        plt.xlabel("Iteration")
-#
-#    plt.ylabel("Normalized $M(I(1), I_1)$")
-#    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-#    if useLog:
-#        plt.xscale("log")
-#    ax = plt.gca()
-##    ax.xaxis.set_major_formatter(ScalarFormatter())
-#    plt.autoscale(enable=True, axis='x', tight=True)
-#
-#    # Fix maximum y to 1.0
-#    ylim = list(ax.get_ylim())
-#    ylim[1] = 1.0
-#    ax.set_ylim(ylim)
 
 def imgChecker(inImg, refImg, useHM=True, pattern=None):
 
@@ -307,50 +149,6 @@ def imgSlices(img, flip=None, numSlices=1):
             sliceImgList.append(sliceImg)
 
     return sliceImgList
-
-def imgGrid(size, spacing, step=None, field=None):
-    """
-    Creates a grid image using with specified size and spacing with distance between lines defined by step.
-    If step is None along a dimention no grid lines will be plotted.
-    For example step=[5,5,None] will result in a grid image with grid lines every 5 voxels in the x and y directions but no grid lines in the z direction.
-    An optinal displacement field can be applied to the grid as well.
-    """
-
-    if step == None: step = [10, 10, 10]
-    if not(util.is_iterable(size)):
-        raise Exception("size must be a list.")
-    if not(util.is_iterable(spacing)):
-        raise Exception("spacing must be a list.")
-    if not(util.is_iterable(step)):
-        raise Exception("step must be a list.")
-    if len(size) != len(spacing):
-        raise Exception("len(size) != len(spacing)")
-    if len(size) != len(step):
-        raise Exception("len(size) != len(step)")
-
-    dimension = len(size)
-    offset = [0] * dimension
-
-    for i in range(dimension):
-        if step[i] is None:
-            step[i] = size[i] + 2
-            offset[i] = -1
-
-    gridSource = sitk.GridImageSource()
-    gridSource.SetSpacing(spacing)
-    gridSource.SetGridOffset(np.array(offset) * np.array(spacing))
-    gridSource.SetOrigin([0] * dimension)
-    gridSource.SetSize(np.array(size))
-    gridSource.SetGridSpacing(np.array(step) * np.array(spacing))
-    gridSource.SetScale(255)
-    gridSource.SetSigma(1 * np.array(spacing))
-    grid = gridSource.Execute()
-
-    if not(field is None):
-        grid = sitk.WrapPad(grid, [20] * dimension, [20] * dimension)
-        grid = registerer.imgApplyField(grid, field, size=size)
-
-    return grid
 
 # Callback invoked by the interact IPython method for scrolling through the image stacks of
 # the two images (moving and fixed).
