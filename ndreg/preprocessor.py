@@ -30,13 +30,15 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
         Preprocessed mouse brain volume.
     """
 
-    img = imgResample(img, spacing)
+    img_ds = imgResample(img, spacing)
     mask_dilation_radius = 10 # voxels
-    mask = sitk.BinaryDilate(create_mask(img, use_triangle=True), mask_dilation_radius)
+    mask = sitk.BinaryDilate(create_mask(img_ds, use_triangle=True), mask_dilation_radius)
     if modality.lower() == 'colm': mask = None
     img_bc = correct_bias_field(img, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
     img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
-    #img_bc_n = sitk.Normalize(img_bc)
+    img_bc_n = sitk.Normalize(img_bc)
+    # ensure output direction is identity
+    img_bc_n.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
     return img_bc
 
 def create_mask(img, use_triangle=False):
@@ -227,7 +229,7 @@ def imgReorient(img, in_orient, out_orient):
     out_img = sitk.FlipImageFilter().Execute(out_img, flip, False)
     return out_img
 
-def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outsideValue=0):
+def imgResample(img, spacing, size=[], useNearest=False, origin=None, outsideValue=0):
     """Resample image to certain spacing and size.
 
     Parameters:
@@ -251,7 +253,7 @@ def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outside
         Resampled input image.
     """
 
-
+    if origin is None: origin = [0]*3
     if len(spacing) != img.GetDimension():
         raise Exception(
             "len(spacing) != " + str(img.GetDimension()))
@@ -281,7 +283,7 @@ def imgResample(img, spacing, size=[], useNearest=False, origin=[0,0,0], outside
         interpolator,
         origin,
         spacing,
-        identityDirection,
+        img.GetDirection(),
         outsideValue)
 
 def normalize(img, percentile=0.99):

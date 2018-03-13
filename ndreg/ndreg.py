@@ -68,10 +68,12 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
     atlas_lddmm_up = imgApplyField(atlas_affine_up, field_up)
     return atlas_lddmm_up
 
-def register_affine(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, shrink_factors=[1], sigmas=[.150], use_mi=False, grad_tol=1e-6, verbose=False):
+def register_affine(atlas, img, learning_rate=1e-1, iters=50, min_step=1e-10, shrink_factors=None, sigmas=None, use_mi=False, grad_tol=1e-6, verbose=False):
     """
     Performs affine registration between an atlas an an image given that they have the same spacing.
     """
+    if shrink_factors is None: shrink_factors = [4,2,1]
+    if sigmas is None: sigmas = [0.6, 0.3, 0.15]
     registration_method = sitk.ImageRegistrationMethod()
 
     # Similarity metric settings.
