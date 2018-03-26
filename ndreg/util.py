@@ -198,6 +198,6 @@ def downsample_and_merge_tiffs(path_to_tiffs, voxel_sizes, desired_spacing, load
        slice_num += load_at_once
        if slice_num > len(files): slice_num = len(files)
     whole_image_np = np.zeros(whole_image[0].shape[:2].append(len(files)))
-    for i in whole_image:
-        np.
+#    for i in whole_image:
+#        np.
     return img_ds
