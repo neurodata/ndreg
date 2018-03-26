@@ -3,9 +3,9 @@ language: python
 sudo: required
 
 # safelist
-branches:
-  only:
-  - master
+#branches:
+#  only:
+#  - master
 
 services:
       - docker
@@ -18,5 +18,7 @@ script:
       - docker ps | grep -q ndreg-vik
     
 after_success:
-      - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-      - docker push neurodata/ndreg
+      - if [ "$TRAVIS_BRANCH" == "master" ]; then
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+        docker push neurodata/ndreg;
+      fi 
