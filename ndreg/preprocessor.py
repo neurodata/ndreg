@@ -39,7 +39,7 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
     img_bc_n = sitk.Normalize(img_bc)
     # ensure output direction is identity
     img_bc_n.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
-    return img_bc
+    return img_bc_n
 
 def create_mask(img, use_triangle=False):
     """Creates a mask of the image to separate brain from background using triangle or otsu thresholding. Otsu thresholding is the default.
