@@ -8,7 +8,7 @@ import shutil
 from itertools import product
 import util,  preprocessor, plotter
 
-def register_brain(atlas, img, modality, spacing=None, outdir=None):
+def register_brain(atlas, img, spacing=None, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
     
     Parameters:
@@ -17,8 +17,6 @@ def register_brain(atlas, img, modality, spacing=None, outdir=None):
         Allen reference atlas or other atlas to register data to.
     img : {SimpleITK.SimpleITK.Image}
         Input observed 3D mouse brain volume
-    modality : {str}
-        Can be 'lavision' or 'colm' for either modality.
     outdir : {str}, optional
         Path to output directory to store intermediates. (the default is None, which will store all outputs in './')
     

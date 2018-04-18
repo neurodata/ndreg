@@ -4,6 +4,8 @@ import sys
 #import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
+import skimage
+import tifffile as tf
 
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -159,3 +161,43 @@ def img_percentile(img, percentile):
     index = np.argmax(cumValues > percentile) - 1
     value = bins[index]
     return value
+
+def merge_tiffs(path_to_tiffs, filename):
+    # merge the tiffs
+    files = os.listdir(path_to_tiffs)
+    files = [f for f in files if f.endswith('.tif') or f.endswith('.tiff')]
+    # make sure the tifs are in the right order
+    files = np.sort(files)
+
+    # now lets go through them and make a tif
+    combined_tiff = sitk.ReadImage(files)
+
+    # now save the tiff
+    sitk.WriteImage(combined_tiff, filename)
+    return combined_tiff
+
+def get_downsample_factor(voxel_sizes, desired_spacing):
+    return [int(i) for i in desired_spacing / voxel_sizes]
+
+def downsample_and_merge_tiffs(path_to_tiffs, voxel_sizes, desired_spacing, load_at_once=50):
+    files = os.listdir(path_to_tiffs)
+    files = [f for f in files if f.endswith('.tif') or f.endswith('.tiff')]
+    # make sure the tifs are in the right order
+    files = np.sort(files)
+
+    # now lets go through them and downsample them
+    downsample_factor = get_downsample_factor(voxel_sizes, desired_spacing)
+    slice_num = 0
+    whole_image = []
+    while slice_num < len(files):
+       img = tf.imread(files[slice_num:slice_num+load_at_once]) 
+       # downsample image by downsample factor in x, y, and z.
+       #  reversing direction because assuming 'z' is the first entry in the downsample factor list
+       img_ds = skimage.measure.block_reduce(img, downsample_factor[::-1], func=np.mean)
+       whole_image.append(img_ds)
+       slice_num += load_at_once
+       if slice_num > len(files): slice_num = len(files)
+    whole_image_np = np.zeros(whole_image[0].shape[:2].append(len(files)))
+#    for i in whole_image:
+#        np.
+    return img_ds
