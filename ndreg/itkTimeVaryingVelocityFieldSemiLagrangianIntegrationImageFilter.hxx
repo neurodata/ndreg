@@ -20,7 +20,7 @@ TimeVaryingVelocityFieldSemiLagrangianIntegrationImageFilter
   this->m_LowerTimeBound =  0.0,
   this->m_UpperTimeBound = 1.0,
   this->m_NumberOfIntegrationSteps = 100;
-  this->m_NumberOfIterations = 1;
+  this->m_NumberOfIterations = 10;
   this->m_NumberOfTimePoints = 0;
   this->SetNumberOfRequiredInputs( 1 );
 
