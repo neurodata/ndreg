@@ -34,12 +34,12 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
     mask_dilation_radius = 10 # voxels
     mask = sitk.BinaryDilate(create_mask(img_ds, use_triangle=True), mask_dilation_radius)
     if modality.lower() == 'colm': mask = None
-    img_bc = correct_bias_field(img, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
+    img_bc = correct_bias_field(img_ds, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
     img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
     img_bc_n = sitk.Normalize(img_bc)
     # ensure output direction is identity
     img_bc_n.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
-    return img_bc
+    return img_bc_n
 
 def create_mask(img, use_triangle=False):
     """Creates a mask of the image to separate brain from background using triangle or otsu thresholding. Otsu thresholding is the default.
