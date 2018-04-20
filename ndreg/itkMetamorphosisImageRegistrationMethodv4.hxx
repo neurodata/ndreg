@@ -457,7 +457,7 @@ MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
 GetImageEnergyFraction()
 {
   double imageEnergyFraction = (GetImageEnergy() - m_MinImageEnergy) / (m_MaxImageEnergy - m_MinImageEnergy);
-  if(isnan(imageEnergyFraction)){ return 0; }
+  if(std::isnan(imageEnergyFraction)){ return 0; }
   return imageEnergyFraction;
 }
 
