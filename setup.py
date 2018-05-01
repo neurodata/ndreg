@@ -26,7 +26,7 @@ AUTHOR = 'Vikram Chandrashekhar'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-        'requests', 'numpy', 'SimpleITK', 'scikit-image', 'tifffile'
+        'requests', 'numpy', 'SimpleITK', 'scikit-image', 'tifffile', 'scikit-image'
 ]
 
 # The rest you shouldn't have to touch too much :)
@@ -150,7 +150,7 @@ setup(
     author_email=EMAIL,
     url=URL,
     packages=find_packages(exclude=('tests',)),
-#    package_data = {'': ["metamorphosis"]},
+    package_data = {'ndreg': ['metamorphosis']},
     #include_package_data=True,
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
