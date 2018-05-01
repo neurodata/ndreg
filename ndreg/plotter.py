@@ -1,4 +1,6 @@
 # plotter.py
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
