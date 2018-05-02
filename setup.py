@@ -150,7 +150,7 @@ setup(
     author_email=EMAIL,
     url=URL,
     packages=find_packages(exclude=('tests',)),
-    package_data = {'ndreg': ['metamorphosis']},
+    package_data = {'': ['metamorphosis']},
     #include_package_data=True,
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
@@ -182,7 +182,7 @@ setup(
     ext_modules=[metamorphosis],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-#     cmdclass={
-#         'upload': UploadCommand,
-#     },
+     cmdclass={
+         'upload': UploadCommand,
+     },
 )
