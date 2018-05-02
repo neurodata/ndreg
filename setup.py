@@ -182,7 +182,7 @@ setup(
     ext_modules=[metamorphosis],
     zip_safe=False,
     cmdclass={
-        build_ext=CMakeBuild,
+        build_ext: CMakeBuild,
         'upload': UploadCommand,
     },
 )
