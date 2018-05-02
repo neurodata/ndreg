@@ -180,9 +180,9 @@ setup(
     # add extension module
     # add custom build_ext command
     ext_modules=[metamorphosis],
-    cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-     cmdclass={
-         'upload': UploadCommand,
-     },
+    cmdclass={
+        build_ext=CMakeBuild,
+        'upload': UploadCommand,
+    },
 )
