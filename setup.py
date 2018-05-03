@@ -1,26 +1,47 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import io
-import os
 import sys
-from shutil import rmtree
-#import re
-import platform
+import os
 import subprocess
+from distutils.sysconfig import get_python_lib
+from setuptools import setup
+from setuptools.command.install import install
 
-from distutils.version import LooseVersion
-#from setuptools.command.build_ext import build_ext
-from setuptools import Command
+def get_virtualenv_path():
+    """Used to work out path to install compiled binaries to."""
+    if hasattr(sys, 'real_prefix'):
+        return sys.prefix
 
-try:
-    from skbuild import setup
-except ImportError:
-    print('scikit-build is required to build from source.', file=sys.stderr)
-    print('Please run:', file=sys.stderr)
-    print('', file=sys.stderr)
-    print('  python -m pip install scikit-build')
-    sys.exit(1)
+    if hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix:
+        return sys.prefix
+
+    if 'conda' in sys.prefix:
+        return sys.prefix
+
+    return None
+
+class CustomInstall(install):
+    """Custom handler for the 'install' command."""
+    def run(self):
+        self.compile_and_install_software()
+        install.run(self)
+
+    def compile_and_install_software(self):
+        """Used the subprocess module to compile/install the C software."""
+        src_path = './ndreg/'
+
+        # compile the software
+        cmd = 'cmake'
+        venv = get_virtualenv_path()
+#        if venv:
+#            cmd += ' --DCMAKE_RUNTIME_OUTPUT_DIRECTORY={} .'.format(os.path.abspath(venv))
+        print('Running command: {} in directory: {}'.format(cmd, os.path.abspath(src_path)))
+        subprocess.check_call(cmd + ' .', cwd=src_path, shell=True)
+
+        # install the software (into the virtualenv bin dir if present)
+        subprocess.check_call('make', cwd=src_path, shell=True)
+        subprocess.check_call('cp metamorphosis {}/bin/'.format(venv), cwd=src_path, shell=True)
+
+
 
 # Package meta-data.
 NAME = 'ndreg'
@@ -31,9 +52,10 @@ AUTHOR = 'Vikram Chandrashekhar'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-        'numpy', 'SimpleITK', 'scikit-image', 'tifffile', 'scikit-image'
+        'numpy', 'SimpleITK', 'scikit-image', 'tifffile'
 ]
 
+#CMAKE_INSTALL_DIR = get_virtualenv_path() or ''
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
 # Except, perhaps the License and Trove Classifiers!
@@ -51,99 +73,6 @@ about = {}
 with open(os.path.join(here, NAME, '__version__.py')) as f:
     exec(f.read(), about)
 
-
-class UploadCommand(Command):
-    """Support setup.py upload."""
-
-    description = 'Build and publish the package.'
-    user_options = []
-
-    @staticmethod
-    def status(s):
-        """Prints things in bold."""
-        print('\033[1m{0}\033[0m'.format(s))
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        try:
-            self.status('Removing previous builds…')
-            rmtree(os.path.join(here, 'dist'))
-        except OSError:
-            pass
-
-        self.status('Building Source and Wheel (universal) distribution…')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
-
-        self.status('Uploading the package to PyPi via Twine…')
-        os.system('twine upload dist/*')
-
-        sys.exit()
-
-
-# needed to build C++ code
-#class CMakeExtension(Extension):
-#    def __init__(self, name, sourcedir=''):
-#        Extension.__init__(self, name, sources=[])
-#        self.sourcedir = os.path.abspath(sourcedir)
-#
-#
-#class CMakeBuild(build_ext):
-#    def run(self):
-#        try:
-#            out = subprocess.check_output(['cmake', '--version'])
-#        except OSError:
-#            raise RuntimeError(
-#                "CMake must be installed to build the following extensions: " +
-#                ", ".join(e.name for e in self.extensions))
-#
-#        if platform.system() == "Windows":
-#            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
-#                                         out.decode()).group(1))
-#            if cmake_version < '3.1.0':
-#                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
-#
-#        for ext in self.extensions:
-#            self.build_extension(ext)
-#
-#    def build_extension(self, ext):
-#        extdir = os.path.abspath(
-#            os.path.dirname(self.get_ext_fullpath(ext.name)))
-#        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-#                      '-DPYTHON_EXECUTABLE=' + sys.executable]
-#
-#        cfg = 'Debug' if self.debug else 'Release'
-#        build_args = ['--config', cfg]
-#
-#        if platform.system() == "Windows":
-#            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(
-#                cfg.upper(),
-#                extdir)]
-#            if sys.maxsize > 2**32:
-#                cmake_args += ['-A', 'x64']
-#            build_args += ['--', '/m']
-#        else:
-#            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-#            build_args += ['--', '-j2']
-#
-#        env = os.environ.copy()
-#        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(
-#            env.get('CXXFLAGS', ''),
-#            self.distribution.get_version())
-#        if not os.path.exists(self.build_temp):
-#            os.makedirs(self.build_temp)
-#        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
-#                              cwd=self.build_temp, env=env)
-#        subprocess.check_call(['cmake', '--build', '.'] + build_args,
-#                              cwd=self.build_temp)
-#        print()  # Add an empty line for cleaner output
-#       
-# end code needed for building C++
-
 setup(
     name=NAME,
     version=about['__version__'],
@@ -152,14 +81,15 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
-    cmake_args=[],
-    cmake_install_dir=[],
-
-    #packages=find_packages(exclude=('tests',)),
-    package_data = {'': 'metamorphosis'},
-    #include_package_data=True,
+    #cmake_source_dir='./ndreg',
+    #cmake_args=['--DCMAKE_RUNTIME_OUTPUT_DIRECTORY={}'.format(CMAKE_INSTALL_DIR)],
+#    cmake_install_dir=[],
+    packages=['ndreg'],
+    #package_data = {'ndreg': 'metamorphosis'},
+    #scripts=['bin/*'],
+    include_package_data=True,
     # If your package is a single module, use this instead of 'packages':
-    py_modules=['ndreg'],
+    #py_modules=['ndreg'],
 
     # entry_points={
     #     'console_scripts': ['mycli=mymodule:cli'],
@@ -172,7 +102,6 @@ setup(
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
@@ -182,13 +111,23 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy'
     ],
-    # $ setup.py publish support.
     # add extension module
     # add custom build_ext command
-    #ext_modules=[CMakeExtension('metamorphosis', sourcedir = './ndreg/')],
+#    ext_modules=[
+#        Executable(
+#            name='',
+#            sources=['source.c', 'extra.cpp'],
+#            libraries=['libsaveforlater']
+#            language='c++',
+#            include_dirs=['../include'],
+#            extra_compile_args=['-static'],
+#            extra_link_args=['-static']
+#        )],
     zip_safe=False,
     cmdclass={
-        #'build_ext': CMakeBuild,
-        'upload': UploadCommand,
+#        'build_ext': build_ext,
+#        'upload': UploadCommand,
+        'install': CustomInstall,
     },
 )
+
