@@ -21,6 +21,7 @@
 #include "itkCheckerBoardImageFilter.h"
 #include "itkMetamorphosisImageRegistrationMethodv4.h"
 #include "itkWrapExtrapolateImageFunction.h"
+#include "itkImageToImageMetricv4.h"
 using namespace std;
 
 typedef itk::CommandLineArgumentParser  ParserType;
@@ -36,7 +37,7 @@ int main(int argc, char* argv[])
   if( !(parser->ArgumentExists("--in") && parser->ArgumentExists("--ref") && parser->ArgumentExists("--out")) )
   {
     cerr<<"Usage:"<<endl;
-    cerr<<"\t"<<argv[0]<<" --in InputPath --ref ReferencePath --out OutputPath"<<endl;
+    cerr<<"\t"<<argv[0]<<" --in InputPath1 ... InputPathN --ref ReferencePath1 ... ReferencePathN --out OutputPath"<<endl;
     cerr<<"\t\t[ --inmask inMaskPath"<<endl;
     cerr<<"\t\t  --refmask refMaskPath"<<endl;
     cerr<<"\t\t  --outmask outMaskPath"<<endl;
@@ -71,38 +72,66 @@ int main(int argc, char* argv[])
   typedef itk::Image<PixelType,2>                    Image2DType;
   typedef itk::Image<PixelType,3>                    Image3DType;
 
-  string referencePath;
-  parser->GetCommandLineArgument("--ref",referencePath);
+  //string referencePath;
+  //parser->GetCommandLineArgument("--ref",referencePath);
+  std::vector<std::string> referencePaths;
+  parser->GetCommandLineArgument("--ref",referencePaths);
+  
+  //initialize vector of image pointers
+  //std::vector<Image3DType::Pointer> referenceImages;
+  
   typedef itk::ImageFileReader<Image3DType> ReaderType;
   ReaderType::Pointer referenceReader = ReaderType::New();
-  referenceReader->SetFileName(referencePath);
-  try
-  {
-    referenceReader->Update();
-  }
-  catch(itk::ExceptionObject& exceptionObject)
-  {
-    cerr<<"Error: Could not read reference image: "<<referencePath<<endl;
-    cerr<<exceptionObject<<endl;
-    return EXIT_FAILURE;
-  }
-
-  Image3DType::Pointer referenceImage = referenceReader->GetOutput();
+  Image3DType::Pointer firstReferenceImage;
   Image3DType::DirectionType direction; direction.SetIdentity();
-  referenceImage->SetDirection(direction);
+  //
+  
+  //for loop to read each image
+  for(std::vector<std::string>::const_iterator i = referencePaths.begin(); i != referencePaths.end(); ++i)
+  {
+      //std::cout<<*i<<std::endl;
+      referenceReader->SetFileName(*i);
+      try
+      {
+          referenceReader->Update();
+      }
+      catch(itk::ExceptionObject& exceptionObject)
+      {
+          cerr<<"Error: Could not read reference image: "<<*i<<endl;
+          cerr<<exceptionObject<<endl;
+          return EXIT_FAILURE;
+      }
+      if(i==referencePaths.begin())
+      {
+         //std::cout<<"first iteration"<<std::endl;
+          firstReferenceImage = referenceReader->GetOutput();
+          firstReferenceImage->SetDirection(direction);
+          break;
+      }
+      //Image3DType::Pointer referenceImage = referenceReader->GetOutput();
+      //referenceImage->SetDirection(direction);
+      //referenceImages.push_back(referenceImage);
+  }
+  //referenceReader->SetFileName(referencePath);
+  //return EXIT_SUCCESS;
 
-  /** Setup metamorphosis */
-  if(referenceImage->GetLargestPossibleRegion().GetSize()[numberOfDimensions-1] <= 1) // If reference image is 2D...
+  //Image3DType::Pointer referenceImage = referenceReader->GetOutput();
+  //Image3DType::DirectionType direction; direction.SetIdentity();
+  //referenceImage->SetDirection(direction);
+    
+  
+  /** Setup metamorphosis **/
+  if(firstReferenceImage->GetLargestPossibleRegion().GetSize()[numberOfDimensions-1] <= 1) // If reference image is 2D...
   {
     // Do 2D metamorphosis
-    Image3DType::RegionType region = referenceImage->GetLargestPossibleRegion();
+    Image3DType::RegionType region = firstReferenceImage->GetLargestPossibleRegion();
     Image3DType::SizeType   size = region.GetSize();
     size[numberOfDimensions-1] = 0;
     region.SetSize(size);
 
     typedef itk::ExtractImageFilter<Image3DType, Image2DType> ExtractorType;
     ExtractorType::Pointer extractor = ExtractorType::New();
-    extractor->SetInput(referenceImage);
+    extractor->SetInput(firstReferenceImage);
     extractor->SetExtractionRegion(region);
     extractor->SetDirectionCollapseToIdentity();
     extractor->Update();
@@ -112,7 +141,7 @@ int main(int argc, char* argv[])
   else
   {
     // Do 3D metamorphosis
-    return Metamorphosis<Image3DType>(referenceImage, parser);
+    return Metamorphosis<Image3DType>(firstReferenceImage, parser);
   }
 
 } // end main
@@ -125,31 +154,83 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
   typedef TImage ImageType;
   typedef itk::MetamorphosisImageRegistrationMethodv4<ImageType,ImageType>  MetamorphosisType;
   typename MetamorphosisType::Pointer metamorphosis = MetamorphosisType::New();
-
-  // Read input (moving) image
-  string inputPath;
-  parser->GetCommandLineArgument("--in",inputPath);
-
+  
+  std::vector<std::string> referencePaths;
+  parser->GetCommandLineArgument("--ref",referencePaths);
+  unsigned int numImages = referencePaths.size();
+  metamorphosis->SetChannels(numImages);
+  
+  // Read reference images
+  std::vector<typename ImageType::Pointer> referenceImages;
   typedef itk::ImageFileReader<ImageType> ReaderType;
+  typename ReaderType::Pointer referenceReader = ReaderType::New();
+  typename ImageType::DirectionType direction; direction.SetIdentity();
+  for(std::vector<std::string>::const_iterator i = referencePaths.begin(); i != referencePaths.end(); ++i)
+  {
+      //std::cout<<*i<<std::endl;
+      referenceReader->SetFileName(*i);
+      try
+      {
+          referenceReader->Update();
+      }
+      catch(itk::ExceptionObject& exceptionObject)
+      {
+          cerr<<"Error: Could not read reference image: "<<*i<<endl;
+          cerr<<exceptionObject<<endl;
+          return EXIT_FAILURE;
+      }
+      typename ImageType::Pointer referenceImage = referenceReader->GetOutput();
+      //ImageType::DirectionType direction; direction.SetIdentity();
+      referenceImage->SetDirection(direction);
+      referenceImages.push_back(referenceImage);
+  }
+  //std::cout<<"length of referenceImages: "<<referenceImages.size()<<std::endl;
+  metamorphosis->SetFixedImages(referenceImages);
+
+  // Read input (moving) images
+  std::vector<std::string> inputPaths;
+  parser->GetCommandLineArgument("--in",inputPaths);
+  if(inputPaths.size() != referencePaths.size())
+  {
+      cerr<<"Error: Number of input and reference images do not match: "<<endl;
+      return EXIT_FAILURE;
+  }
+
+  std::vector<typename ImageType::Pointer> inputImages;
   typename ReaderType::Pointer inputReader = ReaderType::New();
-  inputReader->SetFileName(inputPath);
-  try
+  for(std::vector<std::string>::const_iterator i = inputPaths.begin(); i != inputPaths.end(); ++i)
   {
-    inputReader->Update();
+      //std::cout<<*i<<std::endl;
+      inputReader->SetFileName(*i);
+      //std::cout<<"set file name"<<std::endl;
+      try
+      {
+          inputReader->Update();
+      }
+      catch(itk::ExceptionObject& exceptionObject)
+      {
+          cerr<<"Error: Could not read input image: "<<*i<<endl;
+          cerr<<exceptionObject<<endl;
+          return EXIT_FAILURE;
+      }
+      //std::cout<<"begin check for first interation"<<std::endl;
+      if(i==inputPaths.begin())
+      {
+          //std::cout<<"first input iteration"<<std::endl;
+          typename ImageType::Pointer firstInputImage = inputReader->GetOutput();
+          firstInputImage->SetDirection(direction);
+          metamorphosis->SetMovingImage(firstInputImage);
+      }
+      //std::cout<<"end of first iteration if statement"<<std::endl;
+      typename ImageType::Pointer inputImage = inputReader->GetOutput();
+      //ImageType::DirectionType direction; direction.SetIdentity();
+      inputImage->SetDirection(direction);
+      inputImages.push_back(inputImage);
+      //std::cout<<"end of pushing back input images"<<std::endl;
   }
-  catch(itk::ExceptionObject& exceptionObject)
-  {
-    cerr<<"Error: Could not read input image: "<<inputPath<<endl;
-    cerr<<exceptionObject<<endl;
-    return EXIT_FAILURE;
-  }
-
-  typename ImageType::Pointer movingImage = inputReader->GetOutput();
-  movingImage->SetDirection(fixedImage->GetDirection());
-
-  // Set input (moving) image
-  metamorphosis->SetMovingImage(movingImage); // I_0
-
+  //std::cout<<"length of inputImages: "<<inputImages.size()<<std::endl;
+  metamorphosis->SetMovingImages(inputImages);
+  
   // Read input (moving) mask
   itkStaticConstMacro(ImageDimension, unsigned int, ImageType::ImageDimension);
   typedef itk::ImageMaskSpatialObject<ImageDimension>  MaskType;
@@ -293,12 +374,13 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
   unsigned int numBins = 128;
   parser->GetCommandLineArgument("--bins", numBins);
 
+  std::vector<unsigned int> costFunction;
   if(parser->ArgumentExists("--cost"))
   {
-    unsigned int costFunction;
+    //unsigned int costFunction;
     parser->GetCommandLineArgument("--cost", costFunction);
 
-    switch(costFunction)
+    switch(costFunction[0])
     {
       case 1:
       {
@@ -309,7 +391,21 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
         metric->SetMovingImageMask(movingMask);
 
         metamorphosis->SetMetric(metric);
-        metamorphosis->SetSigma(0.0001);
+        //TODO: get rid of this stuff and possibly need to set a vector instead of a float
+        std::vector<double> mysigma;
+        mysigma.push_back(0.0001);
+        metamorphosis->SetSigma(mysigma);
+        //metamorphosis->SetSigma2(0.0001);
+	
+        //typedef itk::MattesMutualInformationImageToImageMetricv4<ImageType, ImageType> Metric2Type;
+        //typename Metric2Type::Pointer metric2 = Metric2Type::New();
+        //metric2->SetNumberOfHistogramBins(4);
+        //metric2->SetFixedImageMask(fixedMask);
+        //metric2->SetMovingImageMask(movingMask);
+        //metamorphosis->SetMetric2(metric2);
+        //metamorphosis->SetSigma(0.0001);
+        //metamorphosis->SetSigma2(0.0001);
+
         break;
       }
       default:
@@ -320,15 +416,62 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
         metric->SetMovingImageMask(movingMask);
 
         metamorphosis->SetMetric(metric);
-        metamorphosis->SetSigma(1.0);
+        std::vector<double> mysigma;
+        mysigma.push_back(1.0);
+        metamorphosis->SetSigma(mysigma);
+        //metamorphosis->SetSigma2(1.0);
+
+        //typedef itk::MeanSquaresImageToImageMetricv4<ImageType, ImageType> Metric2Type;
+        //typename Metric2Type::Pointer metric2 = Metric2Type::New();
+        //metric2->SetFixedImageMask(fixedMask);
+        //metric2->SetMovingImageMask(movingMask);
+        //metamorphosis->SetMetric2(metric2);
+        //metamorphosis->SetSigma(1.0);
+        //metamorphosis->SetSigma2(1.0);
+
       }
-    } 
+    }
+
+    typedef itk::MattesMutualInformationImageToImageMetricv4<ImageType, ImageType> MIMetricType;
+    typedef itk::MeanSquaresImageToImageMetricv4<ImageType, ImageType> MSEMetricType;
+    typedef itk::ImageToImageMetricv4<ImageType, ImageType> ImageMetricType;
+    // make a list of the base class for the metrics (ImagetoImageMetricv4 or something like that), then dynamic cast the metric inside the .hxx
+    std::vector<typename ImageMetricType::Pointer> metrics;
+    //std::vector<typename MIMetricType::Pointer> metrics;
+    
+    for(std::vector<unsigned int>::const_iterator i = costFunction.begin(); i != costFunction.end(); ++i)
+    {
+      //std::cout<<*i<<std::endl;
+      switch(*i)
+      {
+          case 1:
+          {
+              typename MIMetricType::Pointer metric = MIMetricType::New();
+              metric->SetNumberOfHistogramBins(numBins);
+              metric->SetFixedImageMask(fixedMask);
+              metric->SetMovingImageMask(movingMask);
+              typename ImageMetricType::Pointer parentMetric = dynamic_cast<ImageMetricType *>(metric.GetPointer()); 
+              metrics.push_back(parentMetric);
+              break;
+          }
+          default:
+          {
+              typename MSEMetricType::Pointer metric = MSEMetricType::New();
+              metric->SetFixedImageMask(fixedMask);
+              metric->SetMovingImageMask(movingMask);
+              typename ImageMetricType::Pointer parentMetric = dynamic_cast<ImageMetricType *>(metric.GetPointer()); 
+              metrics.push_back(parentMetric);
+          }
+      }
+          
+    }
+    metamorphosis->SetMetrics(metrics);
     
   }
 
   if(parser->ArgumentExists("--sigma"))
   {
-    double sigma;
+    std::vector<double> sigma;
     parser->GetCommandLineArgument("--sigma",sigma);
     metamorphosis->SetSigma(sigma);
   }
@@ -367,6 +510,17 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
   typedef typename TransformType::ScalarType ScalarType;
   typedef itk::ResampleImageFilter<ImageType, ImageType, ScalarType>   OutputResamplerType;
   typename OutputResamplerType::Pointer outputResampler = OutputResamplerType::New();
+  
+  // begin for loop to compute final transformed images
+  // for now, just output first image
+  
+  // caster for moving image
+  typedef itk::CastImageFilter<ImageType, ImageType> MovingCasterType;
+  typename MovingCasterType::Pointer movingCaster = MovingCasterType::New();
+  movingCaster->SetInput(inputImages[0]); 
+  movingCaster->Update();
+  typename ImageType::Pointer movingImage = movingCaster->GetOutput();
+
   outputResampler->SetInput(movingImage);   // I_0
   outputResampler->SetTransform(transform); // \phi_{10}
   outputResampler->UseReferenceImageOn();
@@ -374,7 +528,6 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
   outputResampler->SetExtrapolator(ExtrapolatorType::New());
   outputResampler->Update();
 
- 
   // Compute I(1) = I_0 o \phi_{10} + B(1)
   typedef itk::AddImageFilter<ImageType,typename MetamorphosisType::BiasImageType,ImageType>  AdderType;
   typename AdderType::Pointer adder = AdderType::New();
@@ -393,7 +546,7 @@ int Metamorphosis(typename TImage::Pointer fixedImage, typename ParserType::Poin
   clamper->Update();
 
   typename OutputImageType::Pointer outputImage = clamper->GetOutput();
-  
+
   // Write output image, I(1)
   string outputPath;
   parser->GetCommandLineArgument("--out",outputPath);

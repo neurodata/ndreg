@@ -13,7 +13,8 @@ MetamorphosisImageRegistrationMethodv4()
   m_RegistrationSmoothness = 0.01;    // 0.01
   m_BiasSmoothness = 0.05;            // 0.05
   m_Mu = 0.1;                         // 0.1
-  m_Sigma = 1.0;                      // 1
+  // TODO: initialize sigmas/metrics?
+  //m_Sigma = 1.0;                      // 1
   m_Gamma = 1.0;                      // 1
   this->SetLearningRate(1e-3);        // 1e-3
   this->SetMinLearningRate(1e-10);     // 1e-8
@@ -27,6 +28,7 @@ MetamorphosisImageRegistrationMethodv4()
   m_RecalculateEnergy = true;
   this->m_CurrentIteration = 0;
   this->m_IsConverged = false;
+  m_Channels = 1;
 
   m_VelocityKernel = TimeVaryingImageType::New();                // K_V
   m_InverseVelocityKernel = TimeVaryingImageType::New();         // L_V
@@ -252,24 +254,39 @@ Initialize()
 
   // Initialize forward image I(1)
   typedef CastImageFilter<MovingImageType, VirtualImageType> MovingCasterType;
-  typename MovingCasterType::Pointer movingCaster = MovingCasterType::New();
-  movingCaster->SetInput(this->GetMovingImage());
-  movingCaster->Update();
-  m_ForwardImage = movingCaster->GetOutput();
+  //typename MovingCasterType::Pointer movingCaster = MovingCasterType::New();
+  //TODO: might not need this anymore
+  //movingCaster->SetInput(this->GetMovingImage());
+  //movingCaster->Update();
+  //m_ForwardImage = movingCaster->GetOutput();
 
+  // leebc- initialize forward mask multichannel
+  for(typename std::vector<VirtualImagePointer>::const_iterator i = m_MovingImages.begin(); i != m_MovingImages.end(); ++i)
+  {
+    typename MovingCasterType::Pointer movingImagesCaster = MovingCasterType::New();
+    movingImagesCaster->SetInput(*i);
+    movingImagesCaster->Update();
+    m_ForwardImages.push_back(movingImagesCaster->GetOutput());
+  }
+  //std::cout<<"end initialize forward images"<<std::endl;
+  //std::cout<<"length of forward images vector: "<<m_ForwardImages.size()<<std::endl;
+  //std::cout<<"length of moving images vector: "<<m_MovingImages.size()<<std::endl;
+  
   // Initialize forward mask M(1)
-  ImageMetricPointer metric = dynamic_cast<ImageMetricType *>(this->m_Metric.GetPointer()); 
+  ImageMetricPointer metric = dynamic_cast<ImageMetricType *>(this->m_Metrics[0].GetPointer());
+
   typedef SpatialObjectToImageFilter<MaskType, MaskImageType> MaskToImageType;
+
   if(metric->GetMovingImageMask())
   {
     typename MaskToImageType::Pointer maskToImage = MaskToImageType::New();
     maskToImage->SetInput(dynamic_cast<const MaskType*>(metric->GetMovingImageMask()));
     maskToImage->SetInsideValue(1);
     maskToImage->SetOutsideValue(0);
-    maskToImage->SetSpacing(m_ForwardImage->GetSpacing());
-    maskToImage->SetOrigin(m_ForwardImage->GetOrigin());
-    maskToImage->SetDirection(m_ForwardImage->GetDirection());
-    maskToImage->SetSize(m_ForwardImage->GetLargestPossibleRegion().GetSize());
+    maskToImage->SetSpacing(m_ForwardImages[0]->GetSpacing());
+    maskToImage->SetOrigin(m_ForwardImages[0]->GetOrigin());
+    maskToImage->SetDirection(m_ForwardImages[0]->GetDirection());
+    maskToImage->SetSize(m_ForwardImages[0]->GetLargestPossibleRegion().GetSize());
     maskToImage->Update();
 
     m_MovingMaskImage = maskToImage->GetOutput(); // M_0
@@ -314,12 +331,12 @@ Initialize()
   m_TimeStep = 1.0/(m_NumberOfTimeSteps - 1); // \Delta t
   m_RecalculateEnergy = true; // v and r have been initialized
   
-  typedef CastImageFilter<FixedImageType, VirtualImageType>  FixedCasterType;
-  typename FixedCasterType::Pointer fixedCaster = FixedCasterType::New();
-  fixedCaster->SetInput(this->GetFixedImage());
-  fixedCaster->Update();
+  //typedef CastImageFilter<FixedImageType, VirtualImageType>  FixedCasterType;
+  //typename FixedCasterType::Pointer fixedCaster = FixedCasterType::New();
+  //fixedCaster->SetInput(this->GetFixedImage());
+  //fixedCaster->Update();
   
-  m_MinImageEnergy = GetImageEnergy(fixedCaster->GetOutput(), fixedMask);
+  m_MinImageEnergy = GetImageEnergy(m_FixedImages, fixedMask);
   m_MaxImageEnergy = GetImageEnergy();
   
   // Disable bias correction if \mu = 0
@@ -418,23 +435,58 @@ GetRateEnergy()
 template<typename TFixedImage, typename TMovingImage>
 double
 MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
-GetImageEnergy(VirtualImagePointer movingImage, MaskPointer movingMask)
+GetImageEnergy(std::vector<VirtualImagePointer> movingImages, MaskPointer movingMask)
 {    
-  typedef CastImageFilter<VirtualImageType, MovingImageType> CasterType;
-  typename CasterType::Pointer caster = CasterType::New();
-  caster->SetInput(movingImage);                            // I(1)
-  caster->Update();
-
-  ImageMetricPointer metric = dynamic_cast<ImageMetricType *>(this->m_Metric.GetPointer()); 
-  metric->SetFixedImage(this->GetFixedImage());        // I_1
-  metric->SetFixedImageGradientFilter(DefaultFixedImageGradientFilterType::New());
-  metric->SetMovingImage(caster->GetOutput());
-  metric->SetMovingImageGradientFilter(DefaultMovingImageGradientFilterType::New());
-  metric->SetMovingImageMask(movingMask);
-  metric->SetVirtualDomainFromImage(m_VirtualImage);
-  metric->Initialize();
   
-  return 0.5*vcl_pow(m_Sigma,-2) * metric->GetValue() * metric->GetNumberOfValidPoints() * m_VoxelVolume;         // 0.5 \sigma^{-2} ||I(1) - I_1||
+  // I should change this so that I'm passing in a vector of images rather than garbage movingImage
+  // here I need to load each pair of moving and fixed images and their corresponding metric
+  // Initialize casters for fixed and moving images
+  typedef CastImageFilter<VirtualImageType, MovingImageType> MovingCasterType;
+  typedef CastImageFilter<VirtualImageType, FixedImageType> FixedCasterType;
+  
+  // initialize double to store sum of image energies
+  double imageEnergy = 0;
+  
+  // start for loop to iterate through length of vector
+  for(int i = 0; i < m_FixedImages.size(); ++i)
+  {
+      //std::cout<<"start for loop"<<std::endl;
+      // load fixed image
+      typename FixedCasterType::Pointer fixedCaster = FixedCasterType::New();
+      fixedCaster->SetInput(m_FixedImages[i]);                            // I(1)
+      //std::cout<<"set input of m_FixedImages"<<std::endl;
+      fixedCaster->Update();
+      // load moving image
+      typename MovingCasterType::Pointer movingCaster = MovingCasterType::New();
+      //BUG: movingImages has size zero. it's not set for some reason
+      //std::cout<<movingImages.size()<<std::endl;
+      movingCaster->SetInput(movingImages[i]);                            // I(1)
+      //std::cout<<"set moving image input"<<std::endl;
+      movingCaster->Update();
+      
+      // load sigma
+      double mysigma = m_Sigma[i];
+      //std::cout<<"set mysigma"<<std::endl;
+      
+      // load metric
+      // need to dynamic cast the metric now since we've stored a list of the base class
+      ImageMetricPointer metric = dynamic_cast<ImageMetricType *>(this->m_Metrics[i].GetPointer());
+      //std::cout<<"cast pointer"<<std::endl;
+      
+      // set metric info
+      metric->SetFixedImage(fixedCaster->GetOutput());        // I_1
+      metric->SetFixedImageGradientFilter(DefaultFixedImageGradientFilterType::New());
+      metric->SetMovingImage(movingCaster->GetOutput());
+      metric->SetMovingImageGradientFilter(DefaultMovingImageGradientFilterType::New());
+      metric->SetMovingImageMask(movingMask);
+      metric->SetVirtualDomainFromImage(m_VirtualImage);
+      metric->Initialize();
+      //std::cout<<"set metric stuff"<<std::endl;
+      
+      // sum image energy for each iteration of loop
+      imageEnergy += 0.5*vcl_pow(mysigma,-2) * metric->GetValue() * metric->GetNumberOfValidPoints() * m_VoxelVolume;
+  }
+  return imageEnergy;         // 0.5 \sigma^{-2} ||I(1) - I_1||
 }
 
 template<typename TFixedImage, typename TMovingImage>
@@ -448,7 +500,7 @@ GetImageEnergy()
     forwardMask = MaskType::New();
     forwardMask->SetImage(m_ForwardMaskImage);
   }
-  return GetImageEnergy(m_ForwardImage, forwardMask); // I(1)
+  return GetImageEnergy(m_ForwardImages, forwardMask); // I(1)
 }
 
 template<typename TFixedImage, typename TMovingImage>
@@ -568,51 +620,99 @@ GetMetricDerivative(FieldPointer field, bool useImageGradients)
   typedef DisplacementFieldTransform<RealType,ImageDimension> DisplacementFieldTransformType;
   typename DisplacementFieldTransformType::Pointer fieldTransform = DisplacementFieldTransformType::New();
   fieldTransform->SetDisplacementField(field); // \phi_{t1}
-
+  
+  // leave the caster type outside
   typedef CastImageFilter<VirtualImageType, MovingImageType> CasterType;
-  typename CasterType::Pointer caster = CasterType::New();
-  caster->SetInput(m_ForwardImage); // I(1)
-  caster->Update();
-
+  typedef CastImageFilter<VirtualImageType, FixedImageType> FixedCasterType;
+  
+  // leave the mask outside
   typename MaskType::Pointer forwardMask;
   if(m_ForwardMaskImage)
   {
     forwardMask = MaskType::New();
     forwardMask->SetImage(m_ForwardMaskImage);
   }
-
-  ImageMetricPointer metric = dynamic_cast<ImageMetricType*>(this->m_Metric.GetPointer()); 
-  metric->SetFixedImage(this->GetFixedImage());                    // I_1
-  metric->SetFixedTransform(fieldTransform);                       // \phi_{t1}
-  metric->SetFixedImageGradientFilter(fixedImageGradientFilter);   // \nabla I_1
-  metric->SetMovingImage(caster->GetOutput());                     // I(1)
-  metric->SetMovingTransform(fieldTransform);                      // \phi_{t1}
-  metric->SetMovingImageGradientFilter(movingImageGradientFilter); // \nabla I_0
-  metric->SetMovingImageMask(forwardMask);
-  metric->SetVirtualDomainFromImage(m_VirtualImage);
-  metric->Initialize(); 
-
-  // Setup metric derivative
+  
+  // leave the metric derivative size on the outside
   typename MetricDerivativeType::SizeValueType metricDerivativeSize = m_VirtualImage->GetLargestPossibleRegion().GetNumberOfPixels() * ImageDimension;
-  MetricDerivativeType metricDerivative(metricDerivativeSize);
-  metricDerivative.Fill(NumericTraits<typename MetricDerivativeType::ValueType>::ZeroValue());
+  
+  // moved this up to use in the following statement
+  typedef MultiplyImageFilter<FieldType,VirtualImageType>  FieldMultiplierType;
+  typedef NaryAddImageFilter<FieldType, FieldType> MCFieldAdderType;
+  typename MCFieldAdderType::Pointer mcadder0 = MCFieldAdderType::New();
+  typename FieldMultiplierType::Pointer multiplier0 = FieldMultiplierType::New();
+  
+  
+  
+  // start for loop to sum the metric metric derivatives
+  for(int i = 0; i < m_FixedImages.size(); ++i)
+  {
+      // forward image caster
+      typename CasterType::Pointer caster = CasterType::New();
+      caster->SetInput(m_ForwardImages[i]); // I(1)
+      caster->Update();
+      
+      // fixed image caster
+      typename FixedCasterType::Pointer fixedCaster = FixedCasterType::New();
+      fixedCaster->SetInput(m_FixedImages[i]); // I(1)
+      fixedCaster->Update();
+      
+      ImageMetricPointer metric = dynamic_cast<ImageMetricType*>(this->m_Metrics[i].GetPointer()); 
+      metric->SetFixedImage(fixedCaster->GetOutput());                    // I_1
+      metric->SetFixedTransform(fieldTransform);                       // \phi_{t1}
+      metric->SetFixedImageGradientFilter(fixedImageGradientFilter);   // \nabla I_1
+      metric->SetMovingImage(caster->GetOutput());                     // I(1)
+      metric->SetMovingTransform(fieldTransform);                      // \phi_{t1}
+      metric->SetMovingImageGradientFilter(movingImageGradientFilter); // \nabla I_0
+      metric->SetMovingImageMask(forwardMask);
+      metric->SetVirtualDomainFromImage(m_VirtualImage);
+      metric->Initialize(); 
+      
+      // Setup metric derivative  
+      MetricDerivativeType metricDerivative(metricDerivativeSize);
+      metricDerivative.Fill(NumericTraits<typename MetricDerivativeType::ValueType>::ZeroValue());
+      
+      // Get metric derivative
+      metric->GetDerivative(metricDerivative); // -dM(I(1) o \phi{t1}, I_1 o \phi{t1}), leebc- kwame says metric.getderiv also includes \nabla I because of the chain rule, just doesn't look like it. so this expression is actually dM \nabla I
+  
+      VectorType *metricDerivativePointer = reinterpret_cast<VectorType*> (metricDerivative.data_block());
 
-  // Get metric derivative
-  metric->GetDerivative(metricDerivative); // -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
-  VectorType *metricDerivativePointer = reinterpret_cast<VectorType*> (metricDerivative.data_block());
+      SizeValueType numberOfPixelsPerTimeStep = m_VirtualImage->GetLargestPossibleRegion().GetNumberOfPixels();
 
-  SizeValueType numberOfPixelsPerTimeStep = m_VirtualImage->GetLargestPossibleRegion().GetNumberOfPixels();
+      // leaving this inside for now
+      typedef ImportImageFilter<VectorType, ImageDimension> ImporterType;
+      typename ImporterType::Pointer importer = ImporterType::New();
+      importer->SetImportPointer(metricDerivativePointer, numberOfPixelsPerTimeStep, false);
+      importer->SetRegion(m_VirtualImage->GetLargestPossibleRegion());
+      importer->SetOrigin(m_VirtualImage->GetOrigin());
+      importer->SetSpacing(m_VirtualImage->GetSpacing());
+      importer->SetDirection(m_VirtualImage->GetDirection());
+      importer->Update();
 
-  typedef ImportImageFilter<VectorType, ImageDimension> ImporterType;
-  typename ImporterType::Pointer importer = ImporterType::New();
-  importer->SetImportPointer(metricDerivativePointer, numberOfPixelsPerTimeStep, false);
-  importer->SetRegion(m_VirtualImage->GetLargestPossibleRegion());
-  importer->SetOrigin(m_VirtualImage->GetOrigin());
-  importer->SetSpacing(m_VirtualImage->GetSpacing());
-  importer->SetDirection(m_VirtualImage->GetDirection());
-  importer->Update();
-
-  FieldPointer metricDerivativeField = importer->GetOutput();    
+      FieldPointer metricDerivativeField = importer->GetOutput();    
+      
+      // multiply by each channel's sigma
+      typename FieldMultiplierType::Pointer multiplier1 = FieldMultiplierType::New();
+      multiplier1->SetInput(importer->GetOutput());  // -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
+      multiplier1->SetConstant(vcl_pow(m_Sigma[i],-2)); // 0.5 \sigma^{-2}
+      multiplier1->Update();
+      
+      // add this channel into the sum
+      mcadder0->PushBackInput(multiplier1->GetOutput());   // p \nabla I_2
+      
+      // make a blank image of zeros to initialize the NaryAddImageFilter
+      if(i==0)
+      {
+        typename FieldMultiplierType::Pointer multiplier2 = FieldMultiplierType::New();
+        multiplier2->SetInput(importer->GetOutput());  // -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
+        multiplier2->SetConstant(0); // 0
+        multiplier2->Update();
+        mcadder0->PushBackInput(multiplier2->GetOutput());
+      }
+  }
+  
+  // actually compute the sum now
+  mcadder0->Update();
 
   // ITK dense transforms always return identity for jacobian with respect to parameters.  
   // ... so we provide an option to use it here.
@@ -624,21 +724,21 @@ GetMetricDerivative(FieldPointer field, bool useImageGradients)
     typedef DisplacementFieldJacobianDeterminantFilter<FieldType,RealType,VirtualImageType>  JacobianDeterminantFilterType;
     typename JacobianDeterminantFilterType::Pointer jacobianDeterminantFilter = JacobianDeterminantFilterType::New();
     jacobianDeterminantFilter->SetInput(this->m_OutputTransform->GetDisplacementField()); // \phi_{t1}
-
-    typename FieldMultiplierType::Pointer multiplier0 = FieldMultiplierType::New();
-    multiplier0->SetInput1(importer->GetOutput());                  // -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
+    
+    multiplier0->SetInput1(mcadder0->GetOutput());
     multiplier0->SetInput2(jacobianDeterminantFilter->GetOutput()); // |D\phi_{t1}|
     multiplier0->Update();
 
-    metricDerivativeField = multiplier0->GetOutput();
+    //metricDerivativeField = multiplier0->GetOutput();
+  }
+  else
+  {
+      return mcadder0->GetOutput();
   }
 
-  typename FieldMultiplierType::Pointer multiplier1 = FieldMultiplierType::New();
-  multiplier1->SetInput(metricDerivativeField);  // -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
-  multiplier1->SetConstant(vcl_pow(m_Sigma,-2)); // 0.5 \sigma^{-2}
-  multiplier1->Update();
-  
-  return multiplier1->GetOutput(); // p(t) \nabla I(t) = p(1, \phi{t1})  \nabla I(1, \phi{t1}) = -0.5 \sigma^{-2} -dM(I(1) o \phi{t1}, I_1 o \phi{t1})
+  return multiplier0->GetOutput();
+
+
 }
 
 template<typename TFixedImage, typename TMovingImage>
@@ -670,10 +770,7 @@ UpdateControls()
       this->m_OutputTransform->SetUpperTimeBound(1.0);
       this->m_OutputTransform->IntegrateVelocityField();
     }
-    
-    //std::cout<<"After integrate"<<std::endl; /***/
     velocityJoiner->PushBackInput(GetMetricDerivative(this->m_OutputTransform->GetDisplacementField(), true)); // p(t) \nabla I(t) =  p(1, \phi{t1})  \nabla I(1, \phi{t1})
-    //std::cout<<"After compute derivative"<<std::endl; /***/
 
     if(m_UseBias)
     {
@@ -754,14 +851,35 @@ UpdateControls()
     typedef WrapExtrapolateImageFunction<MovingImageType, RealType>         ExtrapolatorType;
     typedef ResampleImageFilter<MovingImageType,VirtualImageType,RealType>  MovingResamplerType;
     typename MovingResamplerType::Pointer resampler = MovingResamplerType::New();
-    resampler->SetInput(this->GetMovingImage());   // I_0
-    resampler->SetTransform(transform);            // \phi_{t0}
-    resampler->UseReferenceImageOn();
-    resampler->SetReferenceImage(this->GetFixedImage());
-    resampler->SetExtrapolator(ExtrapolatorType::New());
-    resampler->Update();
+    
+    // start for loop to compute all forward images in each channel
+    
+    typedef CastImageFilter<VirtualImageType, MovingImageType> MovingCasterType;
+    typedef CastImageFilter<VirtualImageType, FixedImageType> FixedCasterType;
+    for(int i = 0; i < m_FixedImages.size(); ++i)
+    {
+        // load fixed image
+        typename FixedCasterType::Pointer fixedCaster = FixedCasterType::New();
+        fixedCaster->SetInput(m_FixedImages[i]);                            // I(1)
+        fixedCaster->Update();
+        // load moving image
+        typename MovingCasterType::Pointer movingCaster = MovingCasterType::New();
+        movingCaster->SetInput(m_MovingImages[i]);                            // I(1)
+        movingCaster->Update();
+        
+        // Compute forward image I(1) = I_0 o \phi_{10} + B(1)
+        resampler->SetInput(movingCaster->GetOutput());   // I_0
+        resampler->SetTransform(transform);            // \phi_{t0}
+        resampler->UseReferenceImageOn();
+        resampler->SetReferenceImage(fixedCaster->GetOutput());
+        resampler->SetExtrapolator(ExtrapolatorType::New());
+        resampler->Update();
 
-    m_ForwardImage = resampler->GetOutput();       // I_0 o \phi_{10}
+        m_ForwardImages[i] = resampler->GetOutput();       // I_0 o \phi_{10}
+
+    }
+    
+    //std::cout<<"end compute forward images"<<std::endl;
     
     // Compute forward mask M(1) = M_0 o \phi{1_0} 
     if(m_ForwardMaskImage)
@@ -803,18 +921,28 @@ UpdateControls()
 
       typedef AddImageFilter<VirtualImageType>   AdderType;
       typename AdderType::Pointer biasAdder = AdderType::New();
-      biasAdder->SetInput1(m_ForwardImage);    // I_0 o \phi_{10}
-      biasAdder->SetInput2(GetBias());         // B(1)
-      biasAdder->Update();
+      
+      // start for loop to add bias to each forward image
+      typedef CastImageFilter<VirtualImageType, VirtualImageType> CasterType;
+      for(int i = 0; i < m_ForwardImages.size(); ++i)
+      {
+        typename CasterType::Pointer caster = CasterType::New();
+        caster->SetInput(m_ForwardImages[i]); // I(1)
+        caster->Update();
+        
+        biasAdder->SetInput1(caster->GetOutput());    // I_0 o \phi_{10}
+        biasAdder->SetInput2(GetBias());         // B(1)
+        biasAdder->Update();
     
-      m_ForwardImage = biasAdder->GetOutput(); // I_0 o \phi_{10} + B(1)
+        m_ForwardImages[i] = biasAdder->GetOutput(); // I_0 o \phi_{10} + B(1)
+      }
     }
 
     m_RecalculateEnergy = true;
    
     typename VirtualImageType::IndexType centerIndex;
-    m_ForwardImage->TransformPhysicalPointToIndex(transform->TransformPoint(m_CenterPoint), centerIndex);
-    bool centerIsInside = m_ForwardImage->GetLargestPossibleRegion().IsInside(centerIndex);
+    m_ForwardImages[0]->TransformPhysicalPointToIndex(transform->TransformPoint(m_CenterPoint), centerIndex);
+    bool centerIsInside = m_ForwardImages[0]->GetLargestPossibleRegion().IsInside(centerIndex);
     if(!centerIsInside || GetEnergy() > energyOld)  // If energy increased or transformed center point of reference image is outside input image domain
     {
       // ...restore the controls to their previous values and decrease learning rate
@@ -883,6 +1011,41 @@ PrintSelf(std::ostream& os, Indent indent ) const
   os<<indent<<"Bias Smoothness: "<<m_BiasSmoothness<<std::endl;
 }
 
+template<typename TFixedImage, typename TMovingImage>
+void
+MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
+SetFixedImages(std::vector<FixedImagePointer> fixedImagesInput)
+{
+  m_FixedImages = fixedImagesInput;
+  return;
+}
+
+template<typename TFixedImage, typename TMovingImage>
+void
+MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
+SetMovingImages(std::vector<MovingImagePointer> movingImagesInput)
+{
+  m_MovingImages = movingImagesInput;
+  return;
+}
+
+template<typename TFixedImage, typename TMovingImage>
+void
+MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
+SetMetrics(std::vector<ImageMetricPointer> metricInput)
+{
+  m_Metrics = metricInput;
+  return;
+}
+
+template<typename TFixedImage, typename TMovingImage>
+void
+MetamorphosisImageRegistrationMethodv4<TFixedImage, TMovingImage>::
+SetSigma(std::vector<double> sigmaInput)
+{
+  m_Sigma = sigmaInput;
+  return;
+}
 
 } // End namespace itk
 
