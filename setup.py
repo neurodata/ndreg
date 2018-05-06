@@ -34,6 +34,7 @@ class CustomInstall(install):
         venv = get_virtualenv_path()
 #        if venv:
 #            cmd += ' --DCMAKE_RUNTIME_OUTPUT_DIRECTORY={} .'.format(os.path.abspath(venv))
+
         print('Running command: {} in directory: {}'.format(cmd, os.path.abspath(src_path)))
         subprocess.check_call(cmd + ' .', cwd=src_path, shell=True)
 
@@ -129,5 +130,6 @@ setup(
 #        'upload': UploadCommand,
         'install': CustomInstall,
     },
+    download_url=r'https://itk.org/ITK/resources/software.html',
 )
 
