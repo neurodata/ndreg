@@ -53,13 +53,13 @@ def register_brain(atlas, img, spacing=None, outdir=None):
     e = 5e-3
     s = 0.1
     atlas_lddmm, field, inv_field = register_lddmm(sitk.Normalize(atlas_affine_w), 
-                                                                                                    sitk.Normalize(img_w),
-                                                                                                    alpha_list=[0.05], 
-                                                                                                    scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
-                                                                                                    epsilon_list=e, sigma=s,
-                                                                                                    min_epsilon_list=e*1e-6,
-                                                                                                    use_mi=False, iterations=50, verbose=True,
-                                                                                                    out_dir=outdir + 'lddmm')
+                                                    sitk.Normalize(img_w),
+                                                    alpha_list=[0.05], 
+                                                    scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
+                                                    epsilon_list=e, sigma=s,
+                                                    min_epsilon_list=e*1e-6,
+                                                    use_mi=False, iterations=50, verbose=True,
+                                                    out_dir=outdir + 'lddmm')
 
     field_up = preprocessor.imgResample(field, atlas.GetSpacing())
     atlas_affine_up = imgApplyAffine(atlas, final_transform)
@@ -119,17 +119,17 @@ def register_lddmm(affine_img, target_img, alpha_list=0.05, scale_list=None,
     if scale_list == None: scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0]
 
     (field, invField) = imgMetamorphosisComposite(affine_img, target_img,
-                                                                                                alphaList=alpha_list,
-                                                                                                scaleList=scale_list,
-                                                                                                epsilonList=epsilon_list,
-                                                                                                minEpsilonList=min_epsilon_list,
-                                                                                                sigma=sigma,
-                                                                                                useMI=use_mi,
-                                                                                                inMask=inMask,
-                                                                                                refMask=refMask,
-                                                                                                iterations=iterations, 
-                                                                                                verbose=verbose,
-                                                                                                outDirPath=out_dir)
+                                                    alphaList=alpha_list,
+                                                    scaleList=scale_list,
+                                                    epsilonList=epsilon_list,
+                                                    minEpsilonList=min_epsilon_list,
+                                                    sigma=sigma,
+                                                    useMI=use_mi,
+                                                    inMask=inMask,
+                                                    refMask=refMask,
+                                                    iterations=iterations, 
+                                                    verbose=verbose,
+                                                    outDirPath=out_dir)
 
     source_lddmm = imgApplyField(affine_img, field, 
                                             size=target_img.GetSize(), 
