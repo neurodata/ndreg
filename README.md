@@ -5,7 +5,7 @@
 [![arXiv Tag](https://img.shields.io/badge/arXiv-1605.02060-brightgreen.svg)](https://arxiv.org/abs/1605.02060)<br/>
 
 
-This is Neurodata's open-source Python package that performs affine and deformable (LDDMM) image registration and is optimized for CLARITY light sheet microscopy images. To   <br/>
+This is Neurodata's open-source Python package that performs affine and deformable (LDDMM) image registration.   <br/>
 
 ## Sytem Requirements
 
