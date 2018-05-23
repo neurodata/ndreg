@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
+
 import subprocess
 import os
 import sys
-#import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
 import skimage

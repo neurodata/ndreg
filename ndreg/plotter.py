@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
-import util
-import preprocessor
+from . import util
+from . import preprocessor
 
 def imgShow(img, vmin=None, vmax=None, cmap=None, alpha=None,
             newFig=True, flip=None, numSlices=3, useNearest=False):

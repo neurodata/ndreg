@@ -6,7 +6,7 @@ import SimpleITK as sitk
 import tempfile
 import shutil
 from itertools import product
-import util,  preprocessor, plotter
+from . import util,  preprocessor, plotter
 
 def register_brain(atlas, img, spacing=None, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.

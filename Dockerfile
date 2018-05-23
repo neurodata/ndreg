@@ -37,7 +37,7 @@ WORKDIR /work
 COPY . /work/ndreg/
 WORKDIR /work/ndreg/
 RUN pip install -r requirements.txt
-RUN cmake -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_FLAGS="-O3" . && make -j2 && make install
+RUN cmake -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_FLAGS="-O3" . && make -j4 && make install
 
 WORKDIR /run
 RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./ && \
@@ -45,6 +45,8 @@ RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./ && \
     cp /work/ndreg/data/ARA_50um.tiff ./
 
 RUN rm -rf /home/itk/
+RUN apt-get update && apt-get install --no-install-recommends -y python-tk
+#    rm -rf /var/lib/apt/lists/* && pip3 install git+git://github.com/vikramc1/ndpull.git
 
 EXPOSE 8888
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
