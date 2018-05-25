@@ -43,12 +43,10 @@ def get_out_filenames(files, out_path):
 
 
 def correct_and_save_images(in_path, out_path, sigma):
-    if mean is None:
-        mean = get_mean_image(in_path)
-        tf.imsave(out_path + 'mean_image.tif', data=mean.astype('float32'), compress=6)
-    if bias is None: 
-        bias = get_bias_image(mean, sigma)
-        tf.imsave(out_path + 'bias_image.tif', data=bias.astype('float32'), compress=6)
+    mean = get_mean_image(in_path)
+    tf.imsave(out_path + '/mean_image.tif', data=mean.astype('float32'), compress=6)
+    bias = get_bias_image(mean, sigma)
+    tf.imsave(out_path + '/bias_image.tif', data=bias.astype('float32'), compress=6)
     files = get_in_filenames(in_path)
     out_files = get_out_filenames(files, out_path)
     assert(len(files) == len(out_files))
