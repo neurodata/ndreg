@@ -9,6 +9,15 @@ from intern.resource.boss.resource import *
 import time
 import requests
 
+dimension = 3
+vectorComponentType = sitk.sitkFloat32
+vectorType = sitk.sitkVectorFloat32
+affine = sitk.AffineTransform(dimension)
+identityAffine = list(affine.GetParameters())
+identityDirection = identityAffine[0:9]
+zeroOrigin = [0] * dimension
+zeroIndex = [0] * dimension
+
 ndToSitkDataTypes = {'uint8': sitk.sitkUInt8,
                      'uint16': sitk.sitkUInt16,
                      'uint32': sitk.sitkUInt32,
@@ -214,7 +223,7 @@ def main():
     rmt = BossRemote(cfg_file_or_dict=args.config)
 
     # resolution level from 0-6
-    resolution_image = 0
+    resolution_image = 3
     image_isotropic = True
 
     # downloading image
