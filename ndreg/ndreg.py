@@ -181,8 +181,8 @@ def register_rigid(atlas, img, learning_rate=1e-2, iters=200, min_step=1e-10, sh
         registration_method.AddCommand(sitk.sitkMultiResolutionIterationEvent, plotter.update_multires_iterations) 
         registration_method.AddCommand(sitk.sitkIterationEvent, lambda: plotter.plot_values(registration_method))
 
-    final_transform = registration_method.Execute(sitk.Cast(img, sitk.sitkFloat32),
-                                                  sitk.Cast(atlas, sitk.sitkFloat32))
+    final_transform = registration_method.Execute(sitk.Cast(atlas, sitk.sitkFloat32),
+                                                  sitk.Cast(img, sitk.sitkFloat32))
     return final_transform
 
 def imgMetamorphosis(inImg, refImg, alpha=0.02, beta=0.05, scale=1.0, iterations=1000, epsilon=None, minEpsilon=None, sigma=1e-4, useNearest=False,
