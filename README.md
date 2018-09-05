@@ -7,6 +7,10 @@
 
 This is Neurodata's open-source Python package that performs affine and deformable (LDDMM) image registration.   <br/>
 
+## Easiest way to use
+
+Download gigantum and import ndreg project (see [here](gigantum.com/gigantum-examples/ndreg-2) for details)
+
 ## Sytem Requirements
 
 The recommended way to use this package is to install [Docker](https://store.docker.com/search?offering=community&type=edition). Docker is currently available on Mac OS X El Capitan 10.11 and newer macOS releases, the following Ubuntu versions: Zesty 17.04 (LTS), Yakkety 16.10, Xenial 16.04 (LTS), Trusty 14.04 (LTS), and Windows 10.
