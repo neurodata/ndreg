@@ -268,7 +268,7 @@ def main():
     rmt = BossRemote(cfg_file_or_dict=args.config)
     # resolution level from 0-6
     if args.modality.lower() == 'colm': 
-        resolution_image = 5
+        resolution_image = 3
         image_isotropic = False
     else: 
         resolution_image = 3
@@ -294,21 +294,23 @@ def main():
     atlas = download_ara(rmt, resolution_atlas, type='average')
     print("time to download atlas at {} um: {} seconds".format(resolution_atlas, time.time()-t1))
 
-    print("preprocessing image")
-    img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing(), args.modality, args.image_orientation)
-    img_p.SetOrigin((0.0,0.0,0.0))
-    print("preprocessing done!")
-    print("running registration")
-    assert(img_p.GetOrigin() == atlas.GetOrigin())
-    assert(img_p.GetDirection() == atlas.GetDirection())
-    assert(img_p.GetSpacing() == atlas.GetSpacing())
-
-    atlas_registered = ndreg.register_brain(atlas, img_p, outdir=outdir)
-    print("registration done")
-
-    end_time = time.time()
-
-    print("Overall time taken through all steps: {} seconds ({} minutes)".format(end_time - t_start_overall, (end_time - t_start_overall)/60.0))
+#    print("preprocessing image")
+#    img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing(), args.modality, args.image_orientation)
+#    # z-axis param in correcting grid is hardcoded assuming z_axis = 2 (3rd axis given original image is IPL)
+##    if args.modality.lower() == 'colm': img_p = preprocessor.remove_grid_artifact(img_p, z_axis=2,)
+#    img_p.SetOrigin((0.0,0.0,0.0))
+#    print("preprocessing done!")
+#    print("running registration")
+#    assert(img_p.GetOrigin() == atlas.GetOrigin())
+#    assert(img_p.GetDirection() == atlas.GetDirection())
+#    assert(img_p.GetSpacing() == atlas.GetSpacing())
+#
+#    atlas_registered = ndreg.register_brain(atlas, img_p, outdir=outdir)
+#    print("registration done")
+#
+#    end_time = time.time()
+#
+#    print("Overall time taken through all steps: {} seconds ({} minutes)".format(end_time - t_start_overall, (end_time - t_start_overall)/60.0))
 
 #    print("uploading annotations to the BOSS")
     anno_channel = 'atlas'
@@ -334,7 +336,10 @@ def main():
     # need to reorient size to match atlas
     # i am hard coding the size assuming
     # the image is oriented LPS
-    size_r = (y_size, z_size, x_size)
+#    size_r = (y_size, z_size, x_size)
+    # this size is hardocoded assuming
+    # input image is IPL (atlas is PIR)
+    size_r = (y_size, x_size, z_size)
 
     print("applying affine transformation to atlas labels")
     img_affine = ndreg.imgApplyAffine(anno_10, trans, spacing=spacing.tolist(), useNearest=True)
