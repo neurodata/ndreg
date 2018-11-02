@@ -9,7 +9,7 @@ This is Neurodata's open-source Python package that performs affine and deformab
 
 ## Easiest way to use
 
-Download gigantum and import ndreg project (see [here](gigantum.com/gigantum-examples/ndreg-2) for details)
+Download gigantum and import ndreg project (see [here](https://gigantum.com/gigantum-examples/ndreg-2) for details)
 
 ## Sytem Requirements
 
