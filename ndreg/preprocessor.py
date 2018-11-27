@@ -34,7 +34,7 @@ def preprocess_brain(img, spacing, modality, image_orientation, atlas_orientatio
     mask_dilation_radius = 10 # voxels
     mask = sitk.BinaryDilate(create_mask(img_ds, use_triangle=True), mask_dilation_radius)
     if modality.lower() == 'colm': mask = None
-    img_bc = correct_bias_field(img_ds, scale=0.25, mask=mask, niters=[500, 500, 500, 500])
+    img_bc = correct_bias_field(img_ds, scale=0.25, mask=sitk.Cast(mask,sitk.sitkUInt8), niters=[500, 500, 500, 500])
     img_bc = imgReorient(img_bc, image_orientation, atlas_orientation)
     img_bc_n = sitk.Normalize(img_bc)
     # ensure output direction is identity
