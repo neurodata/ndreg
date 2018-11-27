@@ -2,7 +2,7 @@ FROM vikramc/itk
 # install ndreg
 # Build ndreg. Cache based on last commit.
 WORKDIR /work
-ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/vik-optimize version.json
+ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
 RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
 #COPY . /work/ndreg/
 WORKDIR /work/ndreg/
