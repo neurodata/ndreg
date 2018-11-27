@@ -257,9 +257,58 @@ def main():
     parser.add_argument('--image_orientation', help='Orientation of brain image. 3-letter orientation of brain. For example can be PIR: Posterior, Inferior, Right.', type=str)
     parser.add_argument('--modality', help='The imaging modality the data were collected with. The options are either "colm" or "lavision"', type=str)
     parser.add_argument('--outdir', help='set the directory in which you want to save the intermediates. default is ./{collection}_{experiment}_{channel}_reg', type=str, default=None)
+    parser.add_argument('--res', help='Resolution at which to perform the registration in microns. Default is 50', type=int, default=50)
     parser.add_argument('--config', help='Path to configuration file with Boss API token. Default: ~/.intern/intern.cfg', default=os.path.expanduser('~/.intern/intern.cfg'))
+    parser.add_argument('--upload_only', help='Flag to perform the upload only and return.', action='store_true')
 
     args = parser.parse_args()
+
+    if args.upload_only:
+
+        print("uploading annotations to the BOSS")
+        anno_channel = 'atlas_{}umreg'.format(args.res)
+        source_channel = args.channel
+        ch_rsc_og = create_channel_resource(rmt, args.channel, args.collection, args.experiment, new_channel=False)
+        print("loading atlas labels")
+        anno_10 = tf.imread('./ara_annotation_10um.tif')
+        anno_10 = sitk.GetImageFromArray(anno_10.astype('uint32'))
+        anno_10.SetSpacing((0.01, 0.01, 0.01))
+        trans = sitk.ReadTransform('{}/atlas_to_observed_affine.txt'.format(outdir))
+        field = util.imgRead('{}/lddmm/field.vtk'.format(outdir))
+        meta = get_xyz_extents(rmt, ch_rsc_og)
+        spacing = np.array(meta[-1])/mm_to_um
+        x_size = meta[0][1]
+        y_size = meta[1][1]
+        z_size = meta[2][1]
+        size = (x_size, y_size, z_size)
+        # need to reorient size to match atlas
+        # i am hard coding the size assuming
+        # the image is oriented LPS
+        size_r = (y_size, z_size, x_size)
+
+        print("applying affine transformation to atlas labels")
+        img_affine = ndreg.imgApplyAffine(anno_10, trans, spacing=spacing.tolist(), useNearest=True)
+
+        print(img_affine.GetSize())
+        print(img_affine.GetSpacing())
+
+        print("applying displacement field transformation to atlas labels")
+        img_lddmm = ndreg.imgApplyField(img_affine, field, spacing=spacing.tolist(), 
+                                                size=size_r, useNearest=True)
+        print(img_lddmm.GetSize())
+        print(img_lddmm.GetSpacing())
+
+        # reorient annotations to match image
+        print("reorienting the labels to match the image")
+        img_lddmm_r = preprocessor.imgReorient(img_lddmm, 'pir', args.image_orientation)
+    #    coll_reg = 'cell_detection'
+        ch_rsc_anno = create_channel_resource(rmt, anno_channel, args.collection, args.experiment, sources=source_channel, datatype='uint64', type='annotation')
+        print("uploading atlas labels to the BOSS")
+        anno = sitk.GetArrayFromImage(img_lddmm_r)
+        if anno.dtype != 'uint64':
+            anno = anno.astype('uint64')
+        upload_to_boss(rmt, anno, ch_rsc_anno)
+
 
     # mm to um conversion factor
     mm_to_um = 1000.0
@@ -271,11 +320,11 @@ def main():
         resolution_image = 5
         image_isotropic = False
     else: 
-        resolution_image = 3
+        resolution_image = 2
         image_isotropic = True
 
     # resolution in microns
-    resolution_atlas = 50
+    resolution_atlas = args.res
     # ensure outdir is default value if None
     if args.outdir is None:
         outdir = '{}_{}_{}_reg/'.format(args.collection, args.experiment, args.channel)
@@ -295,15 +344,60 @@ def main():
     print("time to download atlas at {} um: {} seconds".format(resolution_atlas, time.time()-t1))
 
     print("preprocessing image")
+    t1 = time.time()
     img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing(), args.modality, args.image_orientation)
     img_p.SetOrigin((0.0,0.0,0.0))
-    print("preprocessing done!")
+    print("preprocessing done! Took {} seconds.".format(time.time() - t1))
+#    img_p = preprocessor.imgResample(img, atlas.GetSpacing())
+#    img_p.SetOrigin((0.0,0.0,0.0)) 
     print("running registration")
     assert(img_p.GetOrigin() == atlas.GetOrigin())
     assert(img_p.GetDirection() == atlas.GetDirection())
     assert(img_p.GetSpacing() == atlas.GetSpacing())
 
-    atlas_registered = ndreg.register_brain(atlas, img_p, outdir=outdir)
+    # start registration
+    print("running affine registration...")
+    t1 = time.time()
+    final_transform = ndreg.register_affine(sitk.Normalize(atlas),
+				      sitk.Normalize(img_p),
+				      learning_rate=2e-1,
+				      grad_tol=4e-6,
+				      iters=50,
+				      shrink_factors=[4,2,1],
+				      sigmas=[0.2, 0.1, 0.05],
+                                      verbose=False)
+    print("affine registration done. took {} seconds.".format(time.time() - t1))
+    util.dir_make(outdir)
+    sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
+    
+    atlas_affine = ndreg.resample(atlas, final_transform, img_p, default_value=util.img_percentile(atlas,0.01))
+
+    # whiten both images only before lddmm
+#    whitening_radius = [int(i) for i in np.array([0.5, 0.5, 0.5]) / np.array(atlas.GetSpacing())] # mm
+    whitening_radius = [10,10,10]
+    print("whitening radius: {}".format(whitening_radius))
+    print("whitening atlas image...")
+    t1 = time.time()
+    atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, whitening_radius, alpha=0.25, beta=0.25)
+    print("whitened atlas. Took {} seconds".format(time.time() - t1))
+    print("whitening observed image...")
+    t1 = time.time()
+    img_w = sitk.AdaptiveHistogramEqualization(img_p, whitening_radius, alpha=0.25, beta=0.25)
+    print("whitened observed image. Took {} seconds".format(time.time() - t1))
+
+    # then run lddmm
+    e = 5e-3
+    s = 0.1
+    atlas_lddmm, field, inv_field = ndreg.register_lddmm(sitk.Normalize(atlas_affine_w), 
+                                                    sitk.Normalize(img_w),
+                                                    alpha_list=[0.05], 
+                                                    scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
+                                                    epsilon_list=e, sigma=s,
+                                                    min_epsilon_list=e*1e-6,
+                                                    use_mi=False, iterations=50, verbose=True,
+                                                    out_dir=outdir + 'lddmm')
+
+#    atlas_registered = ndreg.register_brain(atlas, img_p, outdir=outdir)
     print("registration done")
 
     end_time = time.time()
@@ -311,7 +405,7 @@ def main():
     print("Overall time taken through all steps: {} seconds ({} minutes)".format(end_time - t_start_overall, (end_time - t_start_overall)/60.0))
 
 #    print("uploading annotations to the BOSS")
-    anno_channel = 'atlas'
+    anno_channel = 'atlas_{}umreg'.format(args.res)
     source_channel = args.channel
     ch_rsc_og = create_channel_resource(rmt, args.channel, args.collection, args.experiment, new_channel=False)
 #    # set up ndpull

@@ -8,6 +8,17 @@ from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import *
 import time
 import requests
+from urllib2 import HTTPError
+
+
+dimension = 3
+vectorComponentType = sitk.sitkFloat32
+vectorType = sitk.sitkVectorFloat32
+affine = sitk.AffineTransform(dimension)
+identityAffine = list(affine.GetParameters())
+identityDirection = identityAffine[0:9]
+zeroOrigin = [0] * dimension
+zeroIndex = [0] * dimension
 
 ndToSitkDataTypes = {'uint8': sitk.sitkUInt8,
                      'uint16': sitk.sitkUInt16,
