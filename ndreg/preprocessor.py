@@ -161,7 +161,7 @@ def remove_grid_artifact(img, z_axis=1, sigma=10, mask=None):
     #small_factor = 0.1
     bias_z_slice = filters.gaussian_filter(mean_z, sigma)/(mean_z)
     bias_z_img = np.expand_dims(bias_z_slice, z_axis)
-    test = np.repeat(bias_z_img, img.GetSize()[z_axis], axis=z_axis)
+    test = np.repeat(bias_z_img, img_np.shape[z_axis], axis=z_axis)
     img_c = img_np * (test * np.abs(mask - 1))
     img_c[ np.isnan(img_c) ] = 0.0
     img_c_sitk = sitk.GetImageFromArray(img_c)

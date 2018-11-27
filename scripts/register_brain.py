@@ -317,7 +317,7 @@ def main():
     rmt = BossRemote(cfg_file_or_dict=args.config)
     # resolution level from 0-6
     if args.modality.lower() == 'colm': 
-        resolution_image = 5
+        resolution_image = 3
         image_isotropic = False
     else: 
         resolution_image = 2
@@ -344,65 +344,22 @@ def main():
     print("time to download atlas at {} um: {} seconds".format(resolution_atlas, time.time()-t1))
 
     print("preprocessing image")
-    t1 = time.time()
-    img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing(), args.modality, args.image_orientation)
-    img_p.SetOrigin((0.0,0.0,0.0))
-    print("preprocessing done! Took {} seconds.".format(time.time() - t1))
-#    img_p = preprocessor.imgResample(img, atlas.GetSpacing())
-#    img_p.SetOrigin((0.0,0.0,0.0)) 
-    print("running registration")
-    assert(img_p.GetOrigin() == atlas.GetOrigin())
-    assert(img_p.GetDirection() == atlas.GetDirection())
-    assert(img_p.GetSpacing() == atlas.GetSpacing())
-
-    # start registration
-    print("running affine registration...")
-    t1 = time.time()
-    final_transform = ndreg.register_affine(sitk.Normalize(atlas),
-				      sitk.Normalize(img_p),
-				      learning_rate=2e-1,
-				      grad_tol=4e-6,
-				      iters=50,
-				      shrink_factors=[4,2,1],
-				      sigmas=[0.2, 0.1, 0.05],
-                                      verbose=False)
-    print("affine registration done. took {} seconds.".format(time.time() - t1))
-    util.dir_make(outdir)
-    sitk.WriteTransform(final_transform, outdir + 'atlas_to_observed_affine.txt')
-    
-    atlas_affine = ndreg.resample(atlas, final_transform, img_p, default_value=util.img_percentile(atlas,0.01))
-
-    # whiten both images only before lddmm
-#    whitening_radius = [int(i) for i in np.array([0.5, 0.5, 0.5]) / np.array(atlas.GetSpacing())] # mm
-    whitening_radius = [10,10,10]
-    print("whitening radius: {}".format(whitening_radius))
-    print("whitening atlas image...")
-    t1 = time.time()
-    atlas_affine_w = sitk.AdaptiveHistogramEqualization(atlas_affine, whitening_radius, alpha=0.25, beta=0.25)
-    print("whitened atlas. Took {} seconds".format(time.time() - t1))
-    print("whitening observed image...")
-    t1 = time.time()
-    img_w = sitk.AdaptiveHistogramEqualization(img_p, whitening_radius, alpha=0.25, beta=0.25)
-    print("whitened observed image. Took {} seconds".format(time.time() - t1))
-
-    # then run lddmm
-    e = 5e-3
-    s = 0.1
-    atlas_lddmm, field, inv_field = ndreg.register_lddmm(sitk.Normalize(atlas_affine_w), 
-                                                    sitk.Normalize(img_w),
-                                                    alpha_list=[0.05], 
-                                                    scale_list = [0.0625, 0.125, 0.25, 0.5, 1.0],
-                                                    epsilon_list=e, sigma=s,
-                                                    min_epsilon_list=e*1e-6,
-                                                    use_mi=False, iterations=50, verbose=True,
-                                                    out_dir=outdir + 'lddmm')
-
+#    img_p = preprocessor.preprocess_brain(img, atlas.GetSpacing(), args.modality, args.image_orientation)
+#    # z-axis param in correcting grid is hardcoded assuming z_axis = 2 (3rd axis given original image is IPL)
+##    if args.modality.lower() == 'colm': img_p = preprocessor.remove_grid_artifact(img_p, z_axis=2,)
+#    img_p.SetOrigin((0.0,0.0,0.0))
+#    print("preprocessing done!")
+#    print("running registration")
+#    assert(img_p.GetOrigin() == atlas.GetOrigin())
+#    assert(img_p.GetDirection() == atlas.GetDirection())
+#    assert(img_p.GetSpacing() == atlas.GetSpacing())
+#
 #    atlas_registered = ndreg.register_brain(atlas, img_p, outdir=outdir)
-    print("registration done")
-
-    end_time = time.time()
-
-    print("Overall time taken through all steps: {} seconds ({} minutes)".format(end_time - t_start_overall, (end_time - t_start_overall)/60.0))
+#    print("registration done")
+#
+#    end_time = time.time()
+#
+#    print("Overall time taken through all steps: {} seconds ({} minutes)".format(end_time - t_start_overall, (end_time - t_start_overall)/60.0))
 
 #    print("uploading annotations to the BOSS")
     anno_channel = 'atlas_{}umreg'.format(args.res)
@@ -428,7 +385,10 @@ def main():
     # need to reorient size to match atlas
     # i am hard coding the size assuming
     # the image is oriented LPS
-    size_r = (y_size, z_size, x_size)
+#    size_r = (y_size, z_size, x_size)
+    # this size is hardocoded assuming
+    # input image is IPL (atlas is PIR)
+    size_r = (y_size, x_size, z_size)
 
     print("applying affine transformation to atlas labels")
     img_affine = ndreg.imgApplyAffine(anno_10, trans, spacing=spacing.tolist(), useNearest=True)

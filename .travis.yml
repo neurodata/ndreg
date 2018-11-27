@@ -11,7 +11,7 @@ services:
       - docker
 
 install:
-      - docker build -t neurodata/ndreg .
+      - travis_wait 30 docker build -t neurodata/ndreg .
       - docker run -d -p 8888:8888 --name ndreg-vik neurodata/ndreg
 
 script:

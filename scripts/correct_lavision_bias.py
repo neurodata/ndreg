@@ -1,7 +1,7 @@
 import argparse
 import os
 import ndreg
-from ndreg import preprocessor
+from ndreg import preprocessor, util
 import numpy as np
 import SimpleITK as sitk
 from intern.remote.boss import BossRemote
@@ -10,6 +10,15 @@ import time
 import requests
 from urllib2 import HTTPError
 
+
+dimension = 3
+vectorComponentType = sitk.sitkFloat32
+vectorType = sitk.sitkVectorFloat32
+affine = sitk.AffineTransform(dimension)
+identityAffine = list(affine.GetParameters())
+identityDirection = identityAffine[0:9]
+zeroOrigin = [0] * dimension
+zeroIndex = [0] * dimension
 
 dimension = 3
 vectorComponentType = sitk.sitkFloat32
@@ -215,6 +224,7 @@ def main():
     parser.add_argument('--experiment', help='Name of experiment to upload tif stack to', type=str)
     parser.add_argument('--channel', help='Name of channel to upload tif stack to. Default is new channel will be created unless otherwise specified. See --new_channel', type=str)
     parser.add_argument('--config', help='Path to configuration file with Boss API token. Default: ~/.intern/intern.cfg', default=os.path.expanduser('~/.intern/intern.cfg'))
+    parser.add_argument('--scale', help='Scale at which to perform the bias correction. Default is 0.1 meaning 1/10th the size of the original image', default=0.1, type=float)
 
     args = parser.parse_args()
 
@@ -234,11 +244,34 @@ def main():
     img = download_image(rmt, args.collection, args.experiment, args.channel, res=resolution_image, isotropic=image_isotropic)
     print("time to download image at res {} um: {} seconds".format(img.GetSpacing()[0] * mm_to_um, time.time()-t1))
     
-    print("correction bias in image...")
+    print("correcting bias in image...")
     t1 = time.time()
-    scale = 0.1 # scale at which to perform bias correction
-    img_bc = preprocessor.correct_bias_field(img, scale=scale)
-    print("time to correct bias in image at res {} um: {} seconds".format(img.GetSpacing()[0] * mm_to_um * (1.0/scale), time.time()-t1))
+#    scale = 0.05 # scale at which to perform bias correction
+    img_bc = preprocessor.correct_bias_field(img, scale=args.scale, niters=[100,100,100,100])
+    print("time to correct bias in image at res {} um: {} seconds".format(img.GetSpacing()[0] * mm_to_um * (1.0/args.scale), time.time()-t1))
+
+#    print("upsampling bias to match original size of image...")
+#    ch_rsc_og = create_channel_resource(rmt, args.channel, args.collection, args.experiment, new_channel=False)
+#    meta = get_xyz_extents(rmt, ch_rsc_og)
+#    spacing = np.array(meta[-1])/mm_to_um
+#    x_size = meta[0][1]
+#    y_size = meta[1][1]
+#    z_size = meta[2][1]
+#    size = (x_size, y_size, z_size)
+#    
+#    # recover bias
+#    bias_ds = img_bc / sitk.Cast(img, img_bc.GetPixelID())
+#
+#    # Upsample bias
+#    bias = imgResample(bias_ds, spacing=spacing, size=img.GetSize())
+#    
+#    # apply bias to image
+#    img_bc = sitk.Cast(img, sitk.sitkFloat32) * sitk.Cast(bias, sitk.sitkFloat32)
+#
+    print("uploading bias corrected image back to the BOSS")
+    new_channel = args.channel + '_bias_corrected'
+    ch_rsc_bc = create_channel_resource(rmt, new_channel, args.collection, args.experiment, datatype='uint16', type='image')
+    upload_to_boss(rmt, sitk.GetArrayFromImage(img_bc).astype('uint16'), ch_rsc_bc)
 
 
 
