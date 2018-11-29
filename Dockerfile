@@ -7,7 +7,7 @@ RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master
 #COPY . /work/ndreg/
 WORKDIR /work/ndreg/
 RUN pip install -r requirements.txt
-RUN cmake -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_FLAGS="-O3" . && make -j4 && make install
+RUN cmake -DCMAKE_CXX_FLAGS="-O3" . && make -j4 && make install
 
 WORKDIR /run
 RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./ && \
