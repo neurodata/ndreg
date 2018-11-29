@@ -2,8 +2,8 @@ FROM vikramc/itk
 # install ndreg
 # Build ndreg. Cache based on last commit.
 WORKDIR /work
-ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/master version.json
-RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch master --single-branch
+ADD https://api.github.com/repos/neurodata/ndreg/git/refs/heads/py3 version.json
+RUN git clone https://github.com/neurodata/ndreg.git /work/ndreg --branch py3 --single-branch
 #COPY . /work/ndreg/
 WORKDIR /work/ndreg/
 RUN pip install -r requirements.txt
