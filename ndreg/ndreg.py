@@ -563,7 +563,7 @@ def sizeOut(inImg, transform, outSpacing):
     inSize = inImg.GetSize()
     for corner in product((0, 1), repeat=inImg.GetDimension()):
         inCornerIndex = np.array(corner) * np.array(inSize)
-        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex)
+        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex.tolist())
         outCornerPoint = transform.GetInverse().TransformPoint(inCornerPoint)
         outCornerPointList += [list(outCornerPoint)]
 
