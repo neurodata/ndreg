@@ -409,7 +409,7 @@ def imgApplyField(img, field, useNearest=False,
 
     # Apply displacement transform
     return sitk.Resample(img, size, transform, interpolator, [
-                         0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
+                         0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue, img.GetPixelID())
 
 def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, origin=None):
     if origin == None: origin = [0,0,0]
@@ -437,7 +437,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
 
     # Apply affine transform
     outImg = sitk.Resample(inImg, size, affine,
-                           interpolator, origin, spacing, inImg.GetDirection())
+                           interpolator, origin, spacing, inImg.GetDirection(), 0.0, inImg.GetPixelID())
 
     return outImg
 
