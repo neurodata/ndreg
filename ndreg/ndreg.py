@@ -409,7 +409,7 @@ def imgApplyField(img, field, useNearest=False,
 
     # Apply displacement transform
     return sitk.Resample(img, size, transform, interpolator, [
-                         0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue)
+                         0] * img.GetDimension(), spacing, img.GetDirection(), defaultValue, img.GetPixelID())
 
 def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, origin=None):
     if origin == None: origin = [0,0,0]
@@ -436,8 +436,8 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
                 "size must have length {0}.".format(inDimension))
 
     # Apply affine transform
-    outImg = sitk.Resample(inImg, size, affine,
-                           interpolator, origin, spacing)
+    outImg = sitk.Resample(inImg, size.tolist(), affine,
+                           interpolator, origin, spacing, inImg.GetDirection(), 0.0, inImg.GetPixelID())
 
     return outImg
 
@@ -563,7 +563,7 @@ def sizeOut(inImg, transform, outSpacing):
     inSize = inImg.GetSize()
     for corner in product((0, 1), repeat=inImg.GetDimension()):
         inCornerIndex = np.array(corner) * np.array(inSize)
-        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex)
+        inCornerPoint = inImg.TransformIndexToPhysicalPoint(inCornerIndex.tolist())
         outCornerPoint = transform.GetInverse().TransformPoint(inCornerPoint)
         outCornerPointList += [list(outCornerPoint)]
 

@@ -15,7 +15,7 @@ RUN cp /work/ndreg/ndreg_demo_real_data.ipynb ./ && \
     cp /work/ndreg/data/ARA_50um.tiff ./
 
 RUN rm -rf /home/itk/
-RUN apt-get update && apt-get install --no-install-recommends -y python-tk
+RUN apt-get install --no-install-recommends -y python-tk
 #    rm -rf /var/lib/apt/lists/* && pip3 install git+git://github.com/vikramc1/ndpull.git
 
 EXPOSE 8888

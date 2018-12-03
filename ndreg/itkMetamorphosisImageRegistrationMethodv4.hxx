@@ -1,6 +1,7 @@
 #ifndef __itkMetamorphosisImageRegistrationMethodv4_hxx
 #define __itkMetamorphosisImageRegistrationMethodv4_hxx
 #include "itkMetamorphosisImageRegistrationMethodv4.h"
+#include "vcl_legacy_aliases.h"
 
 namespace itk
 {
