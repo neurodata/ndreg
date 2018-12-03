@@ -436,7 +436,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
                 "size must have length {0}.".format(inDimension))
 
     # Apply affine transform
-    outImg = sitk.Resample(inImg, size.tolist(), affine,
+    outImg = sitk.Resample(inImg, size, affine,
                            interpolator, origin, spacing, inImg.GetDirection(), 0.0, inImg.GetPixelID())
 
     return outImg
@@ -569,4 +569,4 @@ def sizeOut(inImg, transform, outSpacing):
 
     size = np.ceil(np.array(outCornerPointList).max(
         0) / outSpacing).astype(int)
-    return size
+    return size.tolist()
