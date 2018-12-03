@@ -437,7 +437,7 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
 
     # Apply affine transform
     outImg = sitk.Resample(inImg, size.tolist(), affine,
-                           interpolator, origin, spacing, inImg.GetDirection(), inImg.GetPixelID())
+                           interpolator, origin, spacing, inImg.GetDirection(), 0.0, inImg.GetPixelID())
 
     return outImg
 
