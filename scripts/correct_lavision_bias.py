@@ -8,7 +8,6 @@ from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import *
 import time
 import requests
-from urllib2 import HTTPError
 
 
 dimension = 3
@@ -59,7 +58,7 @@ def setup_experiment_boss(remote, collection, experiment):
         coord_setup = CoordinateFrameResource(exp_actual.coord_frame)
         coord_actual = remote.get_project(coord_setup)
         return (exp_setup, coord_actual)
-    except HTTPError as e:
+    except Exception as e:
         print(e.message)
 
 
@@ -82,7 +81,7 @@ def setup_channel_boss(
     try:
         chan_actual = remote.get_project(chan_setup)
         return (exp_setup, coord_actual, chan_actual)
-    except HTTPError as e:
+    except Exception as e:
         print(e.message)
 
 

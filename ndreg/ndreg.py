@@ -430,12 +430,14 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
     if size == None:
         # Compute size to contain entire output image
         size = sizeOut(inImg, affine, spacing)
+        size = size.tolist()
     else:
         if len(size) != inDimension:
             raise Exception(
                 "size must have length {0}.".format(inDimension))
 
     # Apply affine transform
+
     outImg = sitk.Resample(inImg, size, affine,
                            interpolator, origin, spacing, inImg.GetDirection(), 0.0, inImg.GetPixelID())
 
