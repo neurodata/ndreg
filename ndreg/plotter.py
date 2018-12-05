@@ -114,7 +114,7 @@ def imgChecker(inImg, refImg, useHM=True, pattern=None):
     if pattern is None: pattern = [4]*inImg.GetDimension()
 
     if(inSize != refSize):
-        sourceSize = np.array([inSize, refSize]).min(0)
+        sourceSize = np.array([inSize, refSize]).min(0).tolist()
         # Empty image with same size as reference image
         tmpImg = sitk.Image(refSize, refImg.GetPixelID())
         tmpImg.CopyInformation(refImg)
