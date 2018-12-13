@@ -430,7 +430,6 @@ def imgApplyAffine(inImg, affine, useNearest=False, size=None, spacing=None, ori
     if size == None:
         # Compute size to contain entire output image
         size = sizeOut(inImg, affine, spacing)
-        size = size.tolist()
     else:
         if len(size) != inDimension:
             raise Exception(
