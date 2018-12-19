@@ -8,7 +8,7 @@ import shutil
 from itertools import product
 from . import util,  preprocessor, plotter
 
-def register_brain(atlas, img, spacing=None, outdir=None):
+def register_brain(atlas, img, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
     
     Parameters:
@@ -25,7 +25,6 @@ def register_brain(atlas, img, spacing=None, outdir=None):
     SimpleITK.SimpleITK.Image
         The atlas deformed to fit the input image.
     """
-    if spacing is None: spacing = atlas.GetSpacing()
     if outdir is None: outdir = './'
     whitening_radius = [int(i) for i in np.array([0.5, 0.5, 0.5]) / np.array(atlas.GetSpacing())] # mm
     # resample both images to `spacing`
@@ -61,10 +60,7 @@ def register_brain(atlas, img, spacing=None, outdir=None):
                                                     use_mi=False, iterations=50, verbose=True,
                                                     out_dir=outdir + 'lddmm')
 
-    field_up = preprocessor.imgResample(field, atlas.GetSpacing())
-    atlas_affine_up = imgApplyAffine(atlas, final_transform)
-    atlas_lddmm_up = imgApplyField(atlas_affine_up, field_up)
-    return atlas_lddmm_up
+    return atlas_lddmm
 
 def register_affine(atlas, img, learning_rate=1e-1, iters=50, min_step=1e-10, shrink_factors=None, sigmas=None, use_mi=False, grad_tol=1e-6, verbose=False):
     """
