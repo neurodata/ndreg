@@ -6,8 +6,6 @@ import os
 import sys
 import SimpleITK as sitk
 import numpy as np
-import skimage
-import tifffile as tf
 
 # in order to find the metamorphosis binary
 ndregDirPath = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -178,28 +176,31 @@ def merge_tiffs(path_to_tiffs, filename):
     sitk.WriteImage(combined_tiff, filename)
     return combined_tiff
 
-def get_downsample_factor(voxel_sizes, desired_spacing):
-    return [int(i) for i in desired_spacing / voxel_sizes]
-
-def downsample_and_merge_tiffs(path_to_tiffs, voxel_sizes, desired_spacing, load_at_once=50):
-    files = os.listdir(path_to_tiffs)
-    files = [f for f in files if f.endswith('.tif') or f.endswith('.tiff')]
-    # make sure the tifs are in the right order
-    files = np.sort(files)
-
-    # now lets go through them and downsample them
-    downsample_factor = get_downsample_factor(voxel_sizes, desired_spacing)
-    slice_num = 0
-    whole_image = []
-    while slice_num < len(files):
-       img = tf.imread(files[slice_num:slice_num+load_at_once]) 
-       # downsample image by downsample factor in x, y, and z.
-       #  reversing direction because assuming 'z' is the first entry in the downsample factor list
-       img_ds = skimage.measure.block_reduce(img, downsample_factor[::-1], func=np.mean)
-       whole_image.append(img_ds)
-       slice_num += load_at_once
-       if slice_num > len(files): slice_num = len(files)
-    whole_image_np = np.zeros(whole_image[0].shape[:2].append(len(files)))
-#    for i in whole_image:
-#        np.
-    return img_ds
+def write_lddmm_output(out,output_path):
+    # write output in numpy format
+    phi = np.concatenate([out['phi0'][None], out['phi1'][None], out['phi2'][None]])
+    np.save(output_path + "phi", phi)
+    phiinv = np.concatenate([out['phiinv0'][None], out['phiinv1'][None], out['phiinv2'][None]])
+    np.save(output_path + "phiinv", phiinv)
+#    XI = np.meshgrid(*xI,indexing='ij')
+#    np.save(output_path + "XI", XI)
+#    XJ = np.meshgrid(*xJ,indexing='ij')
+#    np.save(output_path + "XJ", XJ)
+    Aphi = np.concatenate([out['Aphi0'][None], out['Aphi1'][None], out['Aphi2'][None]])
+    np.save(output_path + "Aphi", Aphi)
+    phiinvAinv = np.concatenate([out['phiinvAinv0'][None], out['phiinvAinv1'][None], out['phiinvAinv2'][None]])
+    np.save(output_path + "phiinvAinv", phiinvAinv)
+    
+    # And lets do A and A inv as text files
+    A = out['A']
+    with open(output_path + 'A.txt','wt') as f:
+        for r in range(4):
+            for c in range(4):
+                f.write(str(A[r,c])+' ')
+            f.write('\n')
+    B = np.linalg.inv(A)
+    with open(output_path + 'Ainv.txt','wt') as f:
+        for r in range(4):
+            for c in range(4):
+                f.write(str(B[r,c])+' ')
+            f.write('\n')

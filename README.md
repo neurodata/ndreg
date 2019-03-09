@@ -7,10 +7,6 @@
 
 This is Neurodata's open-source Python package that performs affine and deformable (LDDMM) image registration.   <br/>
 
-## Easiest way to use
-
-Download gigantum and import ndreg project (see [here](https://gigantum.com/gigantum-examples/ndreg-2) for details)
-
 ## Sytem Requirements
 
 

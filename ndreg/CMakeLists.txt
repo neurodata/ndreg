@@ -1,2 +1,0 @@
-add_executable(metamorphosis metamorphosis.cxx itkMetamorphosisImageRegistrationMethodv4.h itkMetamorphosisImageRegistrationMethodv4.hxx)
-target_link_libraries(metamorphosis ${ITK_LIBRARIES})
