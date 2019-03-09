@@ -13,6 +13,7 @@ Download gigantum and import ndreg project (see [here](https://gigantum.com/giga
 
 ## Sytem Requirements
 
+
 The recommended way to use this package is to install [Docker](https://store.docker.com/search?offering=community&type=edition). Docker is currently available on Mac OS X El Capitan 10.11 and newer macOS releases, the following Ubuntu versions: Zesty 17.04 (LTS), Yakkety 16.10, Xenial 16.04 (LTS), Trusty 14.04 (LTS), and Windows 10.
 
 Note: Certain optimizations made within the package may require a 64-bit machine with an Intel processor
