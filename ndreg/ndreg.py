@@ -70,9 +70,9 @@ def register_brain(atlas, img, spacing=None, outdir=None):
     I = sitk.GetArrayFromImage(atlas)
     J = sitk.GetArrayFromImage(img)
     nxI = list(I.shape)
-    dxI = np.array(atlas.GetSpacing()).T
+    dxI = np.array(atlas.GetSpacing())[::-1]
     nxJ = list(J.shape)
-    dxJ = np.array(img.GetSpacing()).T
+    dxJ = np.array(img.GetSpacing())[::-1]
     xI = [np.arange(nxi)*dxi - np.mean(np.arange(nxi)*dxi) for nxi,dxi in zip(nxI,dxI)]
     xJ = [np.arange(nxi)*dxi - np.mean(np.arange(nxi)*dxi) for nxi,dxi in zip(nxJ,dxJ)]
 
