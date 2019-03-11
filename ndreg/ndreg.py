@@ -93,8 +93,8 @@ def register_brain(atlas, img, spacing=None, outdir=None):
     a = (xI[0][1]-xI[0][0])*5
 
     # other optimization parameters
-    niter = 10 # how many iteraitons of gradient descent
-    naffine = 5 # first naffine iterations are affine only (no deformation)
+    niter = 20 # how many iteraitons of gradient descent
+    naffine = 0 # first naffine iterations are affine only (no deformation)
     nt = 5 # this many timesteps to numerically integrate flow
 
     # When working with weights in EM algorithm, how many M steps per E step

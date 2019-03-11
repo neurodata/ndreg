@@ -211,6 +211,10 @@ def lddmm(I,J,**kwargs):
     
     # initial guess
     params['A0'] = np.eye(4)
+    # initial guess for velocity field
+    params['vt00'] = None
+    params['vt01'] = None
+    params['vt02'] = None
     
     if verbose: print('Set default parameters')
     
@@ -241,7 +245,8 @@ def lddmm(I,J,**kwargs):
     
     nxI = I.shape
     nxJ = J.shape
-    
+
+
     a = params['a']
     p = params['p']
     
@@ -264,6 +269,12 @@ def lddmm(I,J,**kwargs):
         else:
             dt = 0.0
     
+    # if no initialization provided for velocity flow
+    if params['vt00'] == None or params['vt01'] == None or params['vt02'] == None:
+        params['vt00'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
+        params['vt01'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
+        params['vt02'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
+
     niter = params['niter']    
     naffine = params['naffine']
     if nt == 0: # only do affine
@@ -517,9 +528,9 @@ def lddmm(I,J,**kwargs):
             + phi1tinv0_2*(phi1tinv1_0*phi1tinv2_1 - phi1tinv1_1*phi1tinv2_0)
 
         # get the lambda for this time, don't forget to include jacobian factors
-        Aphi1tinv0 = A[0,0]*phi1tinv0 + A[0,1]*phi1tinv1 + A[0,2]*phi1tinv2 + A[0,3];
-        Aphi1tinv1 = A[1,0]*phi1tinv0 + A[1,1]*phi1tinv1 + A[1,2]*phi1tinv2 + A[1,3];
-        Aphi1tinv2 = A[2,0]*phi1tinv0 + A[2,1]*phi1tinv1 + A[2,2]*phi1tinv2 + A[2,3];        
+        Aphi1tinv0 = A[0,0]*phi1tinv0 + A[0,1]*phi1tinv1 + A[0,2]*phi1tinv2 + A[0,3]
+        Aphi1tinv1 = A[1,0]*phi1tinv0 + A[1,1]*phi1tinv1 + A[1,2]*phi1tinv2 + A[1,3]
+        Aphi1tinv2 = A[2,0]*phi1tinv0 + A[2,1]*phi1tinv1 + A[2,2]*phi1tinv2 + A[2,3]        
         lambda_ = interp3(x0J, x1J, x2J, lambda1, Aphi1tinv0, Aphi1tinv1, Aphi1tinv2)*detjac*tf.abs(tf.linalg.det(A))
 
         # set up the gradient at this time        
