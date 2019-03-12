@@ -10,7 +10,7 @@ import tensorflow as tf
 from . import util,  preprocessor, plotter, lddmm
 
 
-def register_brain(atlas, img, spacing=None, outdir=None):
+def register_brain(atlas, img, vt0, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
     
     Parameters:
@@ -93,7 +93,7 @@ def register_brain(atlas, img, spacing=None, outdir=None):
     a = (xI[0][1]-xI[0][0])*5
 
     # other optimization parameters
-    niter = 20 # how many iteraitons of gradient descent
+    niter = 10 # how many iteraitons of gradient descent
     naffine = 0 # first naffine iterations are affine only (no deformation)
     nt = 5 # this many timesteps to numerically integrate flow
 
@@ -127,7 +127,10 @@ def register_brain(atlas, img, spacing=None, outdir=None):
 #                  A0=A0, # initial guess for affine matrix (should get orientation right)
                   nMstep=nMstep, # number of m steps for each e step
                   nMstep_affine=nMstep_affine, # number of m steps during affine only phase
-                  verbose=1
+                  verbose=1,
+                  vt00=vt0[0],
+                  vt01=vt0[1],
+                  vt02=vt0[2]
                  )
     util.write_lddmm_output(out,outdir)
     atlas_deformed = apply_transoformation_to(I,xI,out['phiinvAinv0'],out['phiinvAinv1'],out['phiinvAinv2'])

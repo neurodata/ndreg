@@ -269,11 +269,6 @@ def lddmm(I,J,**kwargs):
         else:
             dt = 0.0
     
-    # if no initialization provided for velocity flow
-    if params['vt00'] == None or params['vt01'] == None or params['vt02'] == None:
-        params['vt00'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
-        params['vt01'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
-        params['vt02'] = np.zeros([nxI[0],nxI[1],nxI[2],nt])
 
     niter = params['niter']    
     naffine = params['naffine']
@@ -296,6 +291,11 @@ def lddmm(I,J,**kwargs):
     eT_ph = tf.placeholder(dtype=dtype)
     
     
+    # if no initialization provided for velocity flow
+    if type(params['vt00']) == type(None) or type(params['vt01']) == type(None) or type(params['vt02']) == type(None):
+        params['vt00'] = np.zeros([nxI[0],nxI[1],nxI[2],nt],dtype='float32')
+        params['vt01'] = np.zeros([nxI[0],nxI[1],nxI[2],nt],dtype='float32')
+        params['vt02'] = np.zeros([nxI[0],nxI[1],nxI[2],nt],dtype='float32')
     if verbose: print('Got parameters')
     
        
@@ -343,13 +343,13 @@ def lddmm(I,J,**kwargs):
         A = tf.get_variable('A', dtype=dtype, trainable=False, initializer=A0)
         Anew = tf.get_variable('Anew', dtype=dtype, trainable=False, initializer=A0)
         
-        vt0 = tf.get_variable('vt0', shape=[nxI[0],nxI[1],nxI[2],nt], dtype=dtype, trainable=False, initializer=tf.zeros_initializer())
-        vt1 = tf.get_variable('vt1', shape=[nxI[0],nxI[1],nxI[2],nt],dtype=dtype,trainable=False, initializer=tf.zeros_initializer())
-        vt2 = tf.get_variable('vt2', shape=[nxI[0],nxI[1],nxI[2],nt], dtype=dtype, trainable=False, initializer=tf.zeros_initializer())
+        vt0 = tf.get_variable('vt0', dtype=dtype, trainable=False, initializer=params['vt00'])
+        vt1 = tf.get_variable('vt1', dtype=dtype, trainable=False, initializer=params['vt01'])
+        vt2 = tf.get_variable('vt2', dtype=dtype, trainable=False, initializer=params['vt02'])
 
-        vt0new = tf.get_variable('vt0new', shape=[nxI[0],nxI[1],nxI[2],nt], dtype=dtype, trainable=False, initializer=tf.zeros_initializer())
-        vt1new = tf.get_variable('vt1new', shape=[nxI[0],nxI[1],nxI[2],nt], dtype=dtype, trainable=False, initializer=tf.zeros_initializer())
-        vt2new = tf.get_variable('vt2new', shape=[nxI[0],nxI[1],nxI[2],nt], dtype=dtype,trainable=False, initializer=tf.zeros_initializer())
+        vt0new = tf.get_variable('vt0new',  dtype=dtype, trainable=False, initializer=params['vt00'])
+        vt1new = tf.get_variable('vt1new',  dtype=dtype, trainable=False, initializer=params['vt01'])
+        vt2new = tf.get_variable('vt2new',  dtype=dtype, trainable=False, initializer=params['vt02'])
         
         # build initial weights WM (matching) and WA (artifact)
         # if not using weights just use 1 and 0
