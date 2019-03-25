@@ -61,8 +61,8 @@ def register_brain(I,xI,J,xJ,vt0,a=5.0,eV=1e-2,niter=50, naffine=0, outdir=None)
 #     params['vt01'] = None
 #     params['vt02'] = None
     if outdir is None: outdir = './'
-    nxI = list(I.shape)
-    nxJ = list(J.shape)
+#    nxI = list(I.shape)
+#    nxJ = list(J.shape)
 #     xI = [np.arange(nxi)*dxi - np.mean(np.arange(nxi)*dxi) for nxi,dxi in zip(nxI,dx)]
 #     xJ = [np.arange(nxi)*dxi - np.mean(np.arange(nxi)*dxi) for nxi,dxi in zip(nxJ,dx)]
 

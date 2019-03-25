@@ -603,9 +603,9 @@ def lddmm(I,J,**kwargs):
     ERall = []
     Eall = []
     Aall = []
-    f0 = plt.figure()
-    f1 = plt.figure()    
-    f2,ax = plt.subplots(1,3)
+#    f0 = plt.figure()
+#    f1 = plt.figure()    
+#    f2,ax = plt.subplots(1,3)
     if nMstep > 0: # weights
         fW = plt.figure()
         fWA = plt.figure()
@@ -632,22 +632,22 @@ def lddmm(I,J,**kwargs):
                  or (it >= naffine and not it%nMstep) ) ): # default behavior to not use weights
                 if verbose: print('Updating weights')
                 _, WMnp, WAnp = sess.run([step_W,WMnew,WAnew])
-                fW.clf()
-                vis.imshow_slices(WMnp, x=xJ, fig=fW)
-                fW.suptitle('Image Weight')
-                fW.canvas.draw()
-                fWA.clf()
-                vis.imshow_slices(WAnp, x=xJ, fig=fWA)
-                fWA.suptitle('Artifact Weight')
-                fWA.canvas.draw()
+#                fW.clf()
+#                vis.imshow_slices(WMnp, x=xJ, fig=fW)
+#                fW.suptitle('Image Weight')
+#                fW.canvas.draw()
+#                fWA.clf()
+#                vis.imshow_slices(WAnp, x=xJ, fig=fWA)
+#                fWA.suptitle('Artifact Weight')
+#                fWA.canvas.draw()
                 
             # draw some pictures    
-            f0.clf()
-            vis.imshow_slices(Idnp, x=xJ, fig=f0)
-            f0.suptitle('Deformed atlas (iter {})'.format(it))
-            f1.clf()
-            vis.imshow_slices(lambda1np, x=xJ, fig=f1)
-            f1.suptitle('Error (iter {})'.format(it))
+#            f0.clf()
+#            vis.imshow_slices(Idnp, x=xJ, fig=f0)
+#            f0.suptitle('Deformed atlas (iter {})'.format(it))
+#            f1.clf()
+#            vis.imshow_slices(lambda1np, x=xJ, fig=f1)
+#            f1.suptitle('Error (iter {})'.format(it))
             
             
             # save energy for each iteration
@@ -665,7 +665,7 @@ def lddmm(I,J,**kwargs):
             # show some parameters to visualize affine transforms
             # translation
             Aall.append(Anp.ravel())
-            Aallnp = np.array(Aall)
+#            Aallnp = np.array(Aall)
 #            ax[1].cla()
 #            ax[1].plot(range(it+1),Aallnp[:,3:12:4])
 #            xlim = ax[1].get_xlim()
@@ -715,7 +715,7 @@ def lddmm(I,J,**kwargs):
               'WM':WMnp, 'WA':WAnp,
 #              'f_kernel':f, # figure of smoothing kernel      
 #              'f_deformed':f0, # figure for deformed atlas
-              'f_error':f1,
+#              'f_error':f1,
 #              'f_energy':f2
              }
     if nMstep > 0:
