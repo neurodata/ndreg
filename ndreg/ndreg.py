@@ -8,6 +8,8 @@ import shutil
 from itertools import product
 import tensorflow as tf
 from . import util,  preprocessor, plotter, lddmm
+import ndreg
+from skimage.transform import downscale_local_mean
 
 def register_brain(I,xI,J,xJ,vt0,a=5.0,eV=1e-2,niter=50, naffine=0, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
