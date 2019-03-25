@@ -439,7 +439,8 @@ def lddmm(I,J,**kwargs):
     # now we can update weights
     WMnew = tf.exp( tf.pow(fAphiI - J, 2) * (-0.5/sigmaM2 ) ) * 1.0/np.sqrt(2.0*np.pi*sigmaM2)
     WAnew = tf.exp( tf.pow(CA - J, 2) * (-0.5/sigmaA2 ) ) * 1.0/np.sqrt(2.0*np.pi*sigmaA2)
-    Wsum = WMnew+WAnew
+    tiny = 1.0e-6
+    Wsum = WMnew+WAnew + tiny
     WMnew = WMnew/Wsum
     WAnew = WAnew/Wsum
     
@@ -629,7 +630,7 @@ def lddmm(I,J,**kwargs):
             if (nMstep>0
                 and ( (it < naffine and not it%nMstep_affine) 
                  or (it >= naffine and not it%nMstep) ) ): # default behavior to not use weights
-                print('Updating weights')
+                if verbose: print('Updating weights')
                 _, WMnp, WAnp = sess.run([step_W,WMnew,WAnew])
                 fW.clf()
                 vis.imshow_slices(WMnp, x=xJ, fig=fW)
@@ -653,41 +654,41 @@ def lddmm(I,J,**kwargs):
             EMall.append(EM_)
             ERall.append(ER_)
             Eall.append(E_)
-            ax[0].cla()
-            ax[0].plot(list(zip(Eall,EMall,ERall)))
-            xlim = ax[0].get_xlim()
-            ylim = ax[0].get_ylim()
-            ax[0].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
-            ax[0].legend(['Etot','Ematch','Ereg'])
-            ax[0].set_title('Energy minimization')
+#            ax[0].cla()
+#            ax[0].plot(list(zip(Eall,EMall,ERall)))
+#            xlim = ax[0].get_xlim()
+#            ylim = ax[0].get_ylim()
+#            ax[0].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
+#            ax[0].legend(['Etot','Ematch','Ereg'])
+#            ax[0].set_title('Energy minimization')
             
             # show some parameters to visualize affine transforms
             # translation
             Aall.append(Anp.ravel())
             Aallnp = np.array(Aall)
-            ax[1].cla()
-            ax[1].plot(range(it+1),Aallnp[:,3:12:4])
-            xlim = ax[1].get_xlim()
-            ylim = ax[1].get_ylim()
-            ax[1].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
-            ax[1].set_title('Translation')
-            # linear
-            ax[2].cla()
-            ax[2].plot(range(it+1),Aallnp[:,0:3])
-            ax[2].plot(range(it+1),Aallnp[:,4:7])
-            ax[2].plot(range(it+1),Aallnp[:,8:11])
-            xlim = ax[2].get_xlim()
-            ylim = ax[2].get_ylim()
-            ax[2].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
-            ax[2].set_title('Linear')
+#            ax[1].cla()
+#            ax[1].plot(range(it+1),Aallnp[:,3:12:4])
+#            xlim = ax[1].get_xlim()
+#            ylim = ax[1].get_ylim()
+#            ax[1].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
+#            ax[1].set_title('Translation')
+#            # linear
+#            ax[2].cla()
+#            ax[2].plot(range(it+1),Aallnp[:,0:3])
+#            ax[2].plot(range(it+1),Aallnp[:,4:7])
+#            ax[2].plot(range(it+1),Aallnp[:,8:11])
+#            xlim = ax[2].get_xlim()
+#            ylim = ax[2].get_ylim()
+#            ax[2].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
+#            ax[2].set_title('Linear')
             
             # force drawing now (otherwise python will wait until code has stopped running)
-            f0.canvas.draw()
-            f1.canvas.draw()
-            f2.canvas.draw()
+#            f0.canvas.draw()
+#            f1.canvas.draw()
+#            f2.canvas.draw()
             
             #f0.savefig('lddmm3d_example_iteration_{:03d}.png'.format(i))
-            print('Finished iteration {}, energy {:3e} (match {:3e}, reg {:3e})'.format(it, E_, EM_, ER_))
+            if verbose: print('Finished iteration {}, energy {:3e} (match {:3e}, reg {:3e})'.format(it, E_, EM_, ER_))
             
         # output variables (get them inside the session)
         Anp,\
@@ -695,12 +696,13 @@ def lddmm(I,J,**kwargs):
         phiinv0np,phiinv1np,phiinv2np,\
         phi1tinv0np,phi1tinv1np,phi1tinv2np,\
         phiinvB0np,phiinvB1np,phiinvB2np,\
-        Aphi1tinv0np,Aphi1tinv1np,Aphi1tinv2np= sess.run([A,\
-                                                     vt0,vt1,vt2,\
-                                                     phiinv0,phiinv1,phiinv2,\
-                                                     phi1tinv0,phi1tinv1,phi1tinv2,\
-                                                     phiinvB0,phiinvB1,phiinvB2,\
-                                                     Aphi1tinv0,Aphi1tinv1,Aphi1tinv2])
+        Aphi1tinv0np,Aphi1tinv1np,Aphi1tinv2np,WMnp,WAnp= sess.run([A,\
+                                                          vt0,vt1,vt2,\
+                                                          phiinv0,phiinv1,phiinv2,\
+                                                          phi1tinv0,phi1tinv1,phi1tinv2,\
+                                                          phiinvB0,phiinvB1,phiinvB2,\
+                                                          Aphi1tinv0,Aphi1tinv1,Aphi1tinv2, \
+                                                          WMnew,WAnew])
     # we will use a dictionary as the output
     # TODO output the deformed images
     # TODO output weights
@@ -710,10 +712,11 @@ def lddmm(I,J,**kwargs):
               'phi0':phi1tinv0np, 'phi1':phi1tinv1np, 'phi2':phi1tinv2np,
               'phiinvAinv0':phiinvB0np,'phiinvAinv1':phiinvB1np,'phiinvAinv2':phiinvB2np,
               'Aphi0':Aphi1tinv0np,'Aphi1':Aphi1tinv1np,'Aphi2':Aphi1tinv2np,
-              'f_kernel':f, # figure of smoothing kernel      
-              'f_deformed':f0, # figure for deformed atlas
+              'WM':WMnp, 'WA':WAnp,
+#              'f_kernel':f, # figure of smoothing kernel      
+#              'f_deformed':f0, # figure for deformed atlas
               'f_error':f1,
-              'f_energy':f2
+#              'f_energy':f2
              }
     if nMstep > 0:
         output['f_WM'] = fW
