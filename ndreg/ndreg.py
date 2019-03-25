@@ -10,6 +10,7 @@ import tensorflow as tf
 from . import util,  preprocessor, plotter, lddmm
 import ndreg
 from skimage.transform import downscale_local_mean
+from tqdm import trange
 
 def register_brain(I,xI,J,xJ,vt0,a=5.0,eV=1e-2,niter=50, naffine=0, outdir=None):
     """Register 3D mouse brain to the Allen Reference atlas using affine and deformable registration.
@@ -118,14 +119,11 @@ def register_brain(I,xI,J,xJ,vt0,a=5.0,eV=1e-2,niter=50, naffine=0, outdir=None)
     atlas_deformed = apply_transformation_to(I,xI,out['phiinvAinv0'],out['phiinvAinv1'],out['phiinvAinv2'])
     return atlas_deformed, out
 
-
-
-
 def multi_res_lddmm(I,xI,J,xJ,resolutions=4):
     # make these in ascending order
     downsample_factors = [2**i for i in range(resolutions)][::-1]
     dI = [i[1]-i[0] for i in xI]
-    dJ = [i[1]-i[0] for i in xJ]
+#    dJ = [i[1]-i[0] for i in xJ]
     spacings = [np.array(dI)*i for i in downsample_factors]
     # deformation step size
     eV = np.array(downsample_factors)*1e-2
@@ -175,3 +173,19 @@ def apply_transformation_to(image,x,trans_x,trans_y,trans_z):
         Id = lddmm.interp3(x[0],x[1],x[2],image,trans_x,trans_y,trans_z)
         Idnp = Id.eval()
     return Idnp
+
+
+def get_grid_locations(shape,spacing):
+    x = [np.arange(nxi)*dxi - np.mean(np.arange(nxi)*dxi) for nxi,dxi in zip(list(shape),spacing)]
+#     x_meshgrid = np.meshgrid(x[0],x[1],x[2],indexing='ij')
+    return x
+    
+def resample(image,image_meshgrid,transformation):
+#     grid_locations = get_meshgrid(image,spacing)
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        image_r = lddmm.interp3(image_meshgrid[0],image_meshgrid[1],image_meshgrid[2],
+                                image,
+                                transformation[0],transformation[1],transformation[2])
+        image_rnp = image_r.eval()
+    return image_rnp
