@@ -1,3 +1,5 @@
+![Downloads shield](https://img.shields.io/pypi/dm/ndreg.svg)
+
 # ndreg
 [![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)](https://travis-ci.org/#)
 [![Documentation Status](https://readthedocs.org/projects/ndreg/badge/?version=latest)](http://ndreg.readthedocs.io/en/latest/?badge=latest)
