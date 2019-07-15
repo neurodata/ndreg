@@ -1,4 +1,4 @@
-![Downloads shield](https://img.shields.io/pypi/dm/intern.svg)
+![Downloads shield](https://img.shields.io/pypi/dm/ndreg.svg)
 
 # ndreg
 [![Travis](https://travis-ci.org/neurodata/ndreg.svg?branch=master)](https://travis-ci.org/#)
